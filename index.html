@@ -5,7 +5,7 @@
     <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
     <title>광버블</title>
     <link rel="manifest" href="manifest.json">
-    <!-- 귀여운 눈누 폰트(DNFBitBit / Jamsil) 및 Cinzel 로드 -->
+    <!-- 귀여운 눈누 폰트 및 Cinzel 로드 -->
     <link rel="preconnect" href="https://fonts.googleapis.com">
     <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
     <link href="https://fonts.googleapis.com/css2?family=Cinzel:wght@700;800&family=Jua&display=swap" rel="stylesheet">
@@ -37,7 +37,7 @@
             overflow-x: hidden;
         }
 
-        /* 1. 인트로 스플래시 화면 */
+        /* 1. 사파리 첫 진입 시 인트로 스플래시 화면 (GuangBubble 샤라락 애니메이션) */
         #splashScreen {
             position: fixed;
             top: 0;
@@ -76,17 +76,17 @@
             to { text-shadow: 0 0 25px rgba(2, 136, 209, 0.7), 0 0 5px #FFF; }
         }
 
-        /* 메인 컨테이너 */
+        /* 컨테이너 공통 */
         .container {
             width: 100%;
             max-width: 440px;
-            display: none; /* 인트로 후 활성화 */
+            display: none; /* JS로 제어 */
             flex-direction: column;
             gap: 16px;
             padding-bottom: 90px;
         }
 
-        /* 화면 공통 카드 */
+        /* 카드 스타일 */
         .card-box {
             background: var(--glass-bg);
             backdrop-filter: blur(14px);
@@ -97,7 +97,75 @@
             box-shadow: 0 10px 30px rgba(2, 136, 209, 0.1);
         }
 
-        /* 상단 타이틀 / 섹션 헤더 */
+        .hero-card {
+            background: rgba(255, 255, 255, 0.7);
+            backdrop-filter: blur(16px);
+            -webkit-backdrop-filter: blur(16px);
+            border: 1px solid var(--glass-border);
+            border-radius: 28px;
+            padding: 30px 20px;
+            text-align: center;
+            box-shadow: 0 15px 35px rgba(2, 136, 209, 0.12);
+        }
+
+        .brand-title {
+            font-family: 'Cinzel', serif;
+            font-size: 2.3rem;
+            font-weight: 800;
+            letter-spacing: 2px;
+            color: #01579B;
+        }
+
+        /* 사파리 전용 3단계 설치 가이드 스타일 */
+        .guide-section {
+            display: flex;
+            flex-direction: column;
+            gap: 12px;
+        }
+
+        .section-title {
+            font-size: 1.1rem;
+            font-weight: 700;
+            color: #01579B;
+            margin-left: 4px;
+        }
+
+        .step-card {
+            background: var(--glass-bg);
+            backdrop-filter: blur(10px);
+            border: 1px solid rgba(255, 255, 255, 0.9);
+            border-radius: 20px;
+            padding: 16px 20px;
+            display: flex;
+            align-items: center;
+            gap: 16px;
+            box-shadow: 0 8px 20px rgba(0, 0, 0, 0.04);
+        }
+
+        .step-num {
+            width: 36px;
+            height: 36px;
+            border-radius: 12px;
+            background: #0288D1;
+            color: white;
+            font-weight: bold;
+            display: flex;
+            justify-content: center;
+            align-items: center;
+            flex-shrink: 0;
+        }
+
+        .step-text {
+            font-size: 1.05rem;
+            color: #333;
+        }
+
+        .step-icon {
+            margin-left: auto;
+            font-size: 1.2rem;
+        }
+
+        /* 본 화면 컴포넌트들 */
         .top-header {
             font-size: 1.4rem;
             color: #01579B;
@@ -107,7 +175,6 @@
             gap: 6px;
         }
 
-        /* 아티스트(물방울) 목록 스타일 */
         .artist-list {
             display: flex;
             flex-direction: column;
@@ -119,7 +186,6 @@
             gap: 14px;
             padding: 12px 8px;
             border-bottom: 1px solid rgba(2, 136, 209, 0.1);
-            transition: background 0.2s;
         }
 
         .artist-item:last-child {
@@ -145,13 +211,6 @@
             font-size: 1.5rem;
             border: 2px solid #0288D1;
             flex-shrink: 0;
-            overflow: hidden;
-        }
-
-        .profile-img img {
-            width: 100%;
-            height: 100%;
-            object-fit: cover;
         }
 
         .artist-info {
@@ -169,7 +228,7 @@
             color: #666;
         }
 
-        /* 혜린 상세/방울권 화면 */
+        /* 혜린 방울권 구독 상세 뷰 */
         .sub-view {
             display: none;
             flex-direction: column;
@@ -206,11 +265,6 @@
             font-size: 1.1rem;
             cursor: pointer;
             box-shadow: 0 6px 15px rgba(3, 169, 244, 0.3);
-            transition: transform 0.1s;
-        }
-
-        .subscribe-btn:active {
-            transform: scale(0.95);
         }
 
         .back-link {
@@ -221,7 +275,7 @@
             margin-top: 10px;
         }
 
-        /* 팝업 메시지 (방울권 성공 / 회원가입 성공) */
+        /* 토스트 팝업 */
         #toastPopup {
             position: fixed;
             top: 20px;
@@ -240,7 +294,7 @@
             transform: translateX(-50%) translateY(0);
         }
 
-        /* 마이페이지 (비눗방울 정보) */
+        /* 마이페이지 */
         .mypage-container {
             display: flex;
             flex-direction: column;
@@ -283,7 +337,7 @@
             margin-top: 10px;
         }
 
-        /* 회원가입 모달 창 */
+        /* 회원가입 모달 */
         #signupModal {
             position: fixed;
             top: 0; left: 0; width: 100%; height: 100%;
@@ -310,8 +364,7 @@
 
         .close-modal {
             position: absolute;
-            top: 16px;
-            right: 18px;
+            top: 16px; right: 18px;
             font-size: 1.3rem;
             cursor: pointer;
             color: #888;
@@ -325,10 +378,6 @@
             background: #F1F8FE;
             font-size: 1rem;
             outline: none;
-        }
-
-        .modal-input:focus {
-            border-color: #0288D1;
         }
 
         .input-hint {
@@ -347,10 +396,9 @@
             border-radius: 12px;
             font-size: 1.05rem;
             cursor: pointer;
-            margin-top: 6px;
         }
 
-        /* 강제 회원가입 안내 팝업 (모달) */
+        /* 강제 회원가입 팝업 */
         #alertModal {
             position: fixed;
             top: 0; left: 0; width: 100%; height: 100%;
@@ -388,17 +436,15 @@
             font-weight: bold;
         }
 
-        /* 하단 투명 네비게이션 바 (선만 검은색, 안은 투명) */
+        /* 하단 네비게이션 바 (투명 버튼 3개) */
         .nav-bar {
             position: fixed;
-            bottom: 0;
-            left: 50%;
+            bottom: 0; left: 50%;
             transform: translateX(-50%);
             width: 100%;
             max-width: 440px;
             background: rgba(255, 255, 255, 0.75);
             backdrop-filter: blur(12px);
-            -webkit-backdrop-filter: blur(12px);
             border-top: 2px solid #222;
             display: flex;
             justify-content: space-around;
@@ -425,52 +471,62 @@
             border-color: #0288D1;
         }
 
-        /* SVG 아이콘 스타일 (투명 내부, 검은색 외곽선) */
         .nav-btn svg {
-            width: 28px;
-            height: 28px;
-            fill: none;
-            stroke: #222;
-            stroke-width: 2;
-            stroke-linecap: round;
-            stroke-linejoin: round;
+            width: 28px; height: 28px;
+            fill: none; stroke: #222;
+            stroke-width: 2; stroke-linecap: round; stroke-linejoin: round;
         }
         .nav-btn.active svg {
             stroke: #0288D1;
         }
 
-        /* 각 메인 탭 화면 영역 */
-        .tab-content {
-            display: none;
-        }
-        .tab-content.active {
-            display: flex;
-            flex-direction: column;
-            gap: 16px;
-        }
+        .tab-content { display: none; }
+        .tab-content.active { display: flex; flex-direction: column; gap: 16px; }
     </style>
 </head>
 <body>
 
-    <!-- 1. 인트로 스플래시 화면 (2초 후 자동 전환) -->
+    <!-- 1. 인트로 스플래시 애니메이션 (2초 후 전환) -->
     <div id="splashScreen">
         <div class="splash-title">GuangBubble</div>
     </div>
 
-    <!-- 토스트 팝업 (3초간 표시) -->
+    <!-- 토스트 팝업 -->
     <div id="toastPopup">방울권 끊기 성공!</div>
 
-    <!-- 본 앱 컨테이너 -->
-    <div class="container" id="mainContainer">
+    <!-- [A] 사파리 브라우저로 처음 들어왔을 때 보이는 설치 가이드 화면 -->
+    <div class="container" id="safariGuideContainer">
+        <div class="hero-card">
+            <div class="brand-title">GuangBubble</div>
+        </div>
+        <div class="guide-section">
+            <div class="section-title">📱 앱으로 간편하게 추가하기</div>
+            <div class="step-card">
+                <div class="step-num">1</div>
+                <div class="step-text">하단 공유 버튼(⬆) 클릭!</div>
+                <div class="step-icon">📤</div>
+            </div>
+            <div class="step-card">
+                <div class="step-num">2</div>
+                <div class="step-text">메뉴에서 더보기 클릭!</div>
+                <div class="step-icon">⋯</div>
+            </div>
+            <div class="step-card">
+                <div class="step-num">3</div>
+                <div class="step-text">홈 화면에 추가하기 클릭!</div>
+                <div class="step-icon">➕</div>
+            </div>
+        </div>
+    </div>
 
-        <!-- [탭 1] 물방울(아티스트) 목록 및 구독 화면 -->
+    <!-- [B] 홈 화면에 추가된 앱(Standalone)으로 들어왔을 때만 보이는 본 화면 컨테이너 -->
+    <div class="container" id="appMainContainer">
+
+        <!-- 탭 1: 물방울 목록 및 구독 -->
         <div id="tab1" class="tab-content active">
-            
-            <!-- 기본 물방울 리스트 뷰 -->
             <div id="artistListView" class="card-box">
                 <div class="top-header">물방울 💧</div>
                 <div class="artist-list">
-                    <!-- 혜린 (클릭 가능) -->
                     <div class="artist-item clickable" onclick="openHyerinDetail()">
                         <div class="profile-img">👩🏻</div>
                         <div class="artist-info">
@@ -478,7 +534,6 @@
                             <span class="artist-status">광버블 공식 아티스트 ✨</span>
                         </div>
                     </div>
-                    <!-- ㄱ ~ ㅎ 아티스트들 (클릭 불가) -->
                     <div class="artist-item"><div class="profile-img">👤</div><div class="artist-info"><span class="artist-name">가은</span><span class="artist-status">물방울 아티스트</span></div></div>
                     <div class="artist-item"><div class="profile-img">👤</div><div class="artist-info"><span class="artist-name">나연</span><span class="artist-status">물방울 아티스트</span></div></div>
                     <div class="artist-item"><div class="profile-img">👤</div><div class="artist-info"><span class="artist-name">다현</span><span class="artist-status">물방울 아티스트</span></div></div>
@@ -489,7 +544,7 @@
                 </div>
             </div>
 
-            <!-- 혜린 방울권 구독 상세 뷰 -->
+            <!-- 혜린 방울권 상세 뷰 -->
             <div id="hyerinDetailView" class="card-box sub-view">
                 <div class="sub-profile-img">👩🏻</div>
                 <div class="sub-name">혜린</div>
@@ -497,7 +552,7 @@
                 <div class="back-link" onclick="closeHyerinDetail()">← 목록으로 돌아가기</div>
             </div>
 
-            <!-- 구독 완료 후 진입하는 혜린 채팅방 뷰 -->
+            <!-- 혜린 채팅방 뷰 -->
             <div id="hyerinChatRoom" class="card-box sub-view" style="padding: 20px;">
                 <div class="top-header" style="justify-content: space-between; width: 100%;">
                     <span>💬 혜린과의 버블 채팅</span>
@@ -513,10 +568,9 @@
                     <button style="background: #0288D1; color: white; border: none; padding: 0 16px; border-radius: 12px; cursor: pointer;">전송</button>
                 </div>
             </div>
-
         </div>
 
-        <!-- [탭 2] 채팅 화면 (구독 후 이용 가능) -->
+        <!-- 탭 2: 채팅 화면 -->
         <div id="tab2" class="tab-content card-box">
             <div class="top-header">채팅 목록 💭</div>
             <div id="chatListContainer">
@@ -526,7 +580,7 @@
             </div>
         </div>
 
-        <!-- [탭 3] 마이페이지 화면 (회원가입 및 비눗방울 정보) -->
+        <!-- 탭 3: 마이페이지 화면 -->
         <div id="tab3" class="tab-content card-box mypage-container">
             <div class="mypage-avatar">🫧</div>
             <div id="userInfoArea">
@@ -538,7 +592,7 @@
 
     </div>
 
-    <!-- 회원가입 모달 창 -->
+    <!-- 회원가입 모달 -->
     <div id="signupModal">
         <div class="modal-content">
             <span class="close-modal" onclick="closeSignupModal()">×</span>
@@ -555,7 +609,7 @@
         </div>
     </div>
 
-    <!-- 강제 회원가입 요청 팝업 (모달) -->
+    <!-- 강제 회원가입 안내 팝업 -->
     <div id="alertModal">
         <div class="alert-box">
             <span class="close-modal" onclick="closeAlertModal()">×</span>
@@ -566,72 +620,64 @@
         </div>
     </div>
 
-    <!-- 하단 투명 네비게이션 바 (투명 버튼 3개: 물방울, 말풍선, 사람) -->
+    <!-- 하단 네비게이션 바 (앱 모드에서만 표시) -->
     <div class="nav-bar" id="bottomNavBar" style="display: none;">
-        <!-- 첫번째 버튼: 투명 물방울 모양 -->
         <button class="nav-btn active" onclick="switchTab(1)" title="물방울">
-            <svg viewBox="0 0 24 24">
-                <path d="M12 2.69l5.66 5.66a8 8 0 1 1-11.31 0z"></path>
-            </svg>
+            <svg viewBox="0 0 24 24"><path d="M12 2.69l5.66 5.66a8 8 0 1 1-11.31 0z"></path></svg>
         </button>
-        <!-- 두번째 버튼: 투명 말풍선 모양 -->
         <button class="nav-btn" onclick="switchTab(2)" title="채팅">
-            <svg viewBox="0 0 24 24">
-                <path d="M21 15a2 2 0 0 1-2 2H7l-4 4V5a2 2 0 0 1 2-2h14a2 2 0 0 1 2 2z"></path>
-            </svg>
+            <svg viewBox="0 0 24 24"><path d="M21 15a2 2 0 0 1-2 2H7l-4 4V5a2 2 0 0 1 2-2h14a2 2 0 0 1 2 2z"></path></svg>
         </button>
-        <!-- 세번째 버튼: 상체와 얼굴이 보이는 추상적 투명 사람 모양 -->
         <button class="nav-btn" onclick="switchTab(3)" title="마이페이지">
-            <svg viewBox="0 0 24 24">
-                <path d="M20 21v-2a4 4 0 0 0-4-4H8a4 4 0 0 0-4 4v2"></path>
-                <circle cx="12" cy="7" r="4"></circle>
-            </svg>
+            <svg viewBox="0 0 24 24"><path d="M20 21v-2a4 4 0 0 0-4-4H8a4 4 0 0 0-4 4v2"></path><circle cx="12" cy="7" r="4"></circle></svg>
         </button>
     </div>
 
     <script>
-        // 전역 데이터 상태
         let isSignedUp = false;
         let isSubscribed = false;
         let userData = { nickname: '', userId: '' };
 
-        // 1. 인트로 애니메이션 종료 후 본 화면 진입
         window.addEventListener('DOMContentLoaded', () => {
             setTimeout(() => {
                 const splash = document.getElementById('splashScreen');
                 splash.style.opacity = '0';
                 setTimeout(() => {
                     splash.style.display = 'none';
-                    document.getElementById('mainContainer').style.display = 'flex';
-                    document.getElementById('bottomNavBar').style.display = 'flex';
+
+                    // PWA 홈 화면 앱(Standalone) 모드 여부 확인
+                    const isStandalone = window.matchMedia('(display-mode: standalone)').matches || window.navigator.standalone;
+
+                    if (isStandalone) {
+                        // 홈 화면 앱으로 실행된 경우: 본 화면 및 하단 네비게이션 노출
+                        document.getElementById('appMainContainer').style.display = 'flex';
+                        document.getElementById('bottomNavBar').style.display = 'flex';
+                    } else {
+                        // 사파리 브라우저로 그냥 들어온 경우: 설치 가이드 안내 화면 노출
+                        document.getElementById('safariGuideContainer').style.display = 'flex';
+                    }
                 }, 600);
-            }, 2000); // 2초 대기
+            }, 2000); // 2초 인트로 타이핑 대기
         });
 
-        // 탭 전환 함수
         function switchTab(tabIndex) {
-            // 탭 버튼 활성화 변경
             const buttons = document.querySelectorAll('.nav-btn');
             buttons.forEach((btn, idx) => {
                 if (idx + 1 === tabIndex) btn.classList.add('active');
                 else btn.classList.remove('active');
             });
 
-            // 탭 내용물 변경
             for (let i = 1; i <= 3; i++) {
                 document.getElementById(`tab${i}`).classList.remove('active');
             }
             document.getElementById(`tab${tabIndex}`).classList.add('active');
 
-            // 탭2(채팅) 진입 시 구독 여부 체크
             if (tabIndex === 2) {
                 renderChatList();
             }
         }
 
-        // 혜린 상세 화면 열기
         function openHyerinDetail() {
-            // 회원가입 여부 확인
             if (!isSignedUp) {
                 document.getElementById('alertModal').style.display = 'flex';
                 return;
@@ -646,12 +692,9 @@
             document.getElementById('artistListView').style.display = 'block';
         }
 
-        // 방울권 끊기 버튼 클릭
         function buyBangwoolTicket() {
             isSubscribed = true;
             showToast("방울권 끊기 성공!");
-            
-            // 3초 뒤 혜린 채팅방으로 자동 진입
             setTimeout(() => {
                 document.getElementById('hyerinDetailView').style.display = 'none';
                 document.getElementById('hyerinChatRoom').style.display = 'flex';
@@ -662,7 +705,6 @@
             closeHyerinDetail();
         }
 
-        // 토스트 팝업 띄우기 (3초)
         function showToast(message) {
             const toast = document.getElementById('toastPopup');
             toast.innerText = message;
@@ -672,7 +714,6 @@
             }, 3000);
         }
 
-        // 회원가입 모달 열기/닫기
         function openSignupModal() {
             document.getElementById('signupModal').style.display = 'flex';
         }
@@ -684,11 +725,10 @@
         }
         function goToSignupFromAlert() {
             closeAlertModal();
-            switchTab(3); // 마이페이지로 이동
+            switchTab(3);
             openSignupModal();
         }
 
-        // 회원가입 정보 저장
         function saveUserInfo() {
             const nick = document.getElementById('inputNickname').value.trim();
             const uid = document.getElementById('inputUserId').value.trim();
@@ -705,13 +745,11 @@
             closeSignupModal();
             showToast("회원가입 완료!");
 
-            // 마이페이지 UI 업데이트 (비눗방울 -> 입력한 닉네임 및 @아이디)
             document.getElementById('displayNickname').innerText = userData.nickname;
             document.getElementById('displayId').innerText = '@' + userData.userId;
-            document.getElementById('signupTriggerBtn').style.display = 'none'; // 회원가입 버튼 숨김
+            document.getElementById('signupTriggerBtn').style.display = 'none';
         }
 
-        // 채팅 목록 렌더링 함수
         function renderChatList() {
             const container = document.getElementById('chatListContainer');
             if (!isSubscribed) {
@@ -735,7 +773,6 @@
             }
         }
 
-        // 채팅방 바로 열기
         function openSubscribedChat() {
             switchTab(1);
             document.getElementById('artistListView').style.display = 'none';
