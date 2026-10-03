@@ -75,7 +75,7 @@
         /* 컨테이너 및 아이패드/태블릿 반응형 대응 */
         .container {
             width: 100%;
-            max-width: 440px; /* 모바일 기본 폭 */
+            max-width: 440px;
             display: none;
             flex-direction: column;
             gap: 12px;
@@ -84,10 +84,9 @@
             transition: max-width 0.3s ease;
         }
 
-        /* 아이패드 / 넓은 디스플레이 대응 */
         @media (min-width: 768px) {
             .container {
-                max-width: 860px; /* 아이패드 폭 확장 */
+                max-width: 860px;
                 padding: 20px;
             }
             .card-box {
@@ -103,7 +102,7 @@
             }
         }
 
-        /* 상단 헤더 */
+        /* 상단 네비게이션 헤더 */
         .top-app-bar {
             display: flex;
             justify-content: space-between;
@@ -146,7 +145,7 @@
             display: none;
         }
 
-        /* 메인 카드 영역 */
+        /* 카드 박스 */
         .card-box {
             background: var(--glass-bg);
             backdrop-filter: blur(14px);
@@ -194,7 +193,7 @@
             justify-content: space-between;
         }
 
-        /* 아티스트 목록 (아이패드에서 2열 그리드 배치) */
+        /* 아티스트 목록 (아이패드 그리드 대응) */
         .artist-list {
             display: flex;
             flex-direction: column;
@@ -241,7 +240,7 @@
         .artist-name { font-size: 1.15rem; color: #333; }
         .artist-status { font-size: 0.88rem; color: #666; }
 
-        /* 서브 및 채팅 뷰 */
+        /* 상세 뷰 & 채팅 뷰 */
         .sub-view {
             display: none;
             flex-direction: column;
@@ -279,7 +278,7 @@
             color: #0288D1; font-size: 0.95rem; cursor: pointer; text-decoration: underline; margin-top: 6px;
         }
 
-        /* 채팅 화면 */
+        /* 버블 채팅 화면 */
         .chat-room-container {
             display: none;
             flex-direction: column;
@@ -310,13 +309,21 @@
             box-shadow: 0 2px 6px rgba(0,0,0,0.04);
         }
 
-        /* 말풍선 위치/색상 스타일 */
-        .msg-bubble.blue {
-            background: #B3E5FC;
+        /* 말풍선 배치 및 색상 */
+        /* 아티스트 말풍선 (하늘색) */
+        .msg-bubble.artist-sky {
+            background: #87CEEB;
+            color: #01579B;
+            align-self: flex-start;
+            border-bottom-left-radius: 4px;
+        }
+        .msg-bubble.artist-sky-right {
+            background: #87CEEB;
             color: #01579B;
             align-self: flex-end;
             border-bottom-right-radius: 4px;
         }
+        /* 팬/유저 말풍선 (흰색) */
         .msg-bubble.white-right {
             background: #FFFFFF;
             color: #333;
@@ -368,7 +375,7 @@
             background: #0288D1; color: white; border: none; padding: 12px 28px; border-radius: 16px; font-size: 1.05rem; cursor: pointer; margin-top: 10px;
         }
 
-        /* 모달 스타일 */
+        /* 모달 공통 */
         .modal-overlay {
             position: fixed; top: 0; left: 0; width: 100%; height: 100%;
             background: rgba(0,0,0,0.4); display: none; justify-content: center; align-items: center; z-index: 9000; backdrop-filter: blur(4px);
@@ -399,7 +406,7 @@
         }
         #toastPopup.show { transform: translateX(-50%) translateY(0); }
 
-        /* 하단 네비게이션 바 (아이패드 넓이 상응) */
+        /* 하단 네비게이션 바 (아이패드 대응) */
         .nav-bar {
             position: fixed; bottom: 0; left: 50%; transform: translateX(-50%);
             width: 100%; max-width: 440px; background: rgba(255, 255, 255, 0.85); backdrop-filter: blur(12px);
@@ -426,15 +433,15 @@
 </head>
 <body>
 
-    <!-- 1. 스플래시 화면 -->
+    <!-- 1. 인트로 스플래시 애니메이션 -->
     <div id="splashScreen">
         <div class="splash-title">GuangBubble</div>
     </div>
 
-    <!-- 토스트 알림 -->
+    <!-- 토스트 팝업 -->
     <div id="toastPopup">메시지</div>
 
-    <!-- [A] 사파리 가이드 -->
+    <!-- [A] 사파리 가이드 화면 -->
     <div class="container" id="safariGuideContainer">
         <div class="hero-card"><div class="splash-title" style="animation:none; width:auto; border:none;">GuangBubble</div></div>
         <div class="guide-section">
@@ -448,7 +455,7 @@
     <!-- [B] 메인 앱 컨테이너 -->
     <div class="container" id="appMainContainer">
         
-        <!-- 상단 바 & 알림 아이콘 -->
+        <!-- 상단 헤더 & 알림 버튼 -->
         <div class="top-app-bar">
             <div class="app-title">GuangBubble</div>
             <div class="noti-btn" onclick="openNotificationModal()">
@@ -456,14 +463,14 @@
             </div>
         </div>
 
-        <!-- 탭 1: 물방울 목록 -->
+        <!-- 탭 1: 물방울 (아티스트 목록 및 방울권) -->
         <div id="tab1" class="tab-content active card-box">
             <div id="artistListView">
                 <div class="top-header">물방울 💧</div>
                 <div class="artist-list" id="artistListContainer"></div>
             </div>
 
-            <!-- 아티스트 상세 화면 -->
+            <!-- 아티스트 상세 뷰 -->
             <div id="artistDetailView" class="sub-view">
                 <div class="sub-profile-img" id="detailAvatar">👤</div>
                 <div class="sub-name" id="detailName" style="font-size:1.4rem; font-weight:bold;">아티스트</div>
@@ -483,7 +490,7 @@
                 </div>
             </div>
 
-            <!-- 개별 채팅방 -->
+            <!-- 개별 채팅방 뷰 -->
             <div id="chatRoomView" class="chat-room-container">
                 <div class="top-header" style="margin-bottom:8px;">
                     <span id="chatRoomTitle">💬 버블 채팅</span>
@@ -510,7 +517,7 @@
 
     </div>
 
-    <!-- 모달 1: 회원가입 / 프로필 편집 -->
+    <!-- 모달 1: 회원가입 / 정보변경 -->
     <div class="modal-overlay" id="signupModal">
         <div class="modal-content">
             <span class="close-modal" onclick="closeModal('signupModal')">×</span>
@@ -532,7 +539,7 @@
         </div>
     </div>
 
-    <!-- 모달 3: 계정 관리 (로그아웃 / 회원 탈퇴) -->
+    <!-- 모달 3: 로그아웃 및 회원 탈퇴 -->
     <div class="modal-overlay" id="logoutModal">
         <div class="modal-content" style="text-align:center;">
             <div style="font-size:1.2rem; color:#01579B; font-weight:bold;">계정 관리</div>
@@ -545,7 +552,7 @@
         </div>
     </div>
 
-    <!-- 모달 4: 관리자 전용 유저 목록 (gpepsl 전용) -->
+    <!-- 모달 4: 관리자 전용 회원가입 유저 목록 (gpepsl) -->
     <div class="modal-overlay" id="userListModal">
         <div class="modal-content">
             <span class="close-modal" onclick="closeModal('userListModal')">×</span>
@@ -554,7 +561,7 @@
         </div>
     </div>
 
-    <!-- 모달 5: 알림 / 승인 내역 모달 -->
+    <!-- 모달 5: 알림 및 물방울 신청/승인 목록 -->
     <div class="modal-overlay" id="notiModal">
         <div class="modal-content">
             <span class="close-modal" onclick="closeModal('notiModal')">×</span>
@@ -563,7 +570,7 @@
         </div>
     </div>
 
-    <!-- 모달 6: 승낙 완료 후 아티스트 활동명 등록 -->
+    <!-- 모달 6: 승낙 후 아티스트 이름 설정 -->
     <div class="modal-overlay" id="setArtistNameModal">
         <div class="modal-content">
             <div style="font-size:1.15rem; color:#01579B;">🎉 축하합니다! 물방울 승낙완료</div>
@@ -581,26 +588,22 @@
     </div>
 
     <script>
-        // 기초 변수
+        // 초기 데이터 세팅
         let isSignedUp = false;
         let currentUser = { nickname: '', userId: '' };
         
-        // 아티스트 목록 (혜린 = gpepsl 자동 매핑)
+        // 초기 아티스트: 혜린(gpepsl)만 남기고 나머지 인물들은 제거 (요청사항 반영)
         let artists = [
-            { id: 'hyerin', linkedUserId: 'gpepsl', name: '혜린', avatar: '👩🏻', desc: '광버블 아티스트' },
-            { id: 'gaeun', linkedUserId: null, name: '가은', avatar: '👤', desc: '광버블 아티스트' },
-            { id: 'nayeon', linkedUserId: null, name: '나연', avatar: '👤', desc: '광버블 아티스트' },
-            { id: 'dahyun', linkedUserId: null, name: '다현', avatar: '👤', desc: '광버블 아티스트' },
-            { id: 'rahee', linkedUserId: null, name: '라희', avatar: '👤', desc: '광버블 아티스트' }
+            { id: 'hyerin', linkedUserId: 'gpepsl', name: '혜린', avatar: '👩🏻', desc: '광버블 아티스트' }
         ];
 
-        let subscribedTickets = []; // 끊은 방울권 목록
-        let chatHistories = {}; // 메시지 전송 내역
+        let subscribedTickets = []; 
+        let chatHistories = {}; 
         
-        let registeredUsers = []; // 회원가입된 유저들
-        let bubbleRequests = []; // 아티스트 신청 목록
-        let userNotifications = {}; // 사용자별 알림
-        let unreadNotiCount = 0;
+        let registeredUsers = []; 
+        let bubbleRequests = []; 
+        let userNotifications = {}; 
+        let unreadNotiCount = 0; 
         let currentChatArtistId = null;
 
         window.addEventListener('DOMContentLoaded', () => {
@@ -621,7 +624,7 @@
             }, 2000);
         });
 
-        // 탭 이동
+        // 탭 전환
         function switchTab(tabIndex) {
             const buttons = document.querySelectorAll('.nav-btn');
             buttons.forEach((btn, idx) => {
@@ -634,10 +637,14 @@
             }
             document.getElementById(`tab${tabIndex}`).classList.add('active');
 
-            if (tabIndex === 2) renderChatList();
+            if (tabIndex === 2) {
+                // 채팅 탭 진입 시 항상 대화 목록(첫 화면)이 보이도록 리셋 (요청사항 반영)
+                closeChatRoom();
+                renderChatList();
+            }
         }
 
-        // 알림 숫자를 화면에 적용
+        // 알림 숫자 업데이트
         function updateNotiBadge() {
             const badge = document.getElementById('notiBadge');
             if (!currentUser.userId || unreadNotiCount <= 0) {
@@ -648,9 +655,8 @@
             }
         }
 
-        // 알림 개수 계산
         function recalculateNotiCount() {
-            if (!currentUser.userId) { unreadNotiCount = 0; return; }
+            if (!currentUser.userId) { unreadNotiCount = 0; updateNotiBadge(); return; }
             let count = 0;
             const myNotis = userNotifications[currentUser.userId] || [];
             count += myNotis.length;
@@ -682,7 +688,7 @@
             });
         }
 
-        // 아티스트 상세 뷰
+        // 아티스트 상세 뷰 열기
         function openArtistDetail(artist) {
             if (!isSignedUp) {
                 showToast("회원가입을 먼저 해주세요!");
@@ -699,8 +705,6 @@
             document.getElementById('detailName').innerText = artist.name;
 
             const actionArea = document.getElementById('subscribeActionArea');
-            
-            // 내가 그 아티스트인 경우 자가 방울권 구매 차단
             const isSelfArtist = (artist.linkedUserId && artist.linkedUserId === currentUser.userId);
 
             if (isSelfArtist) {
@@ -729,7 +733,6 @@
             document.getElementById('artistListView').style.display = 'block';
         }
 
-        // 방울권 구매
         function buyTicket(artistId) {
             if (!subscribedTickets.includes(artistId)) {
                 subscribedTickets.push(artistId);
@@ -739,7 +742,6 @@
             openArtistDetail(artist);
         }
 
-        // 방울권 취소
         function cancelTicket(artistId) {
             subscribedTickets = subscribedTickets.filter(id => id !== artistId);
             showToast("방울권이 취소되었습니다.");
@@ -793,7 +795,6 @@
             });
         }
 
-        // 개별 채팅방 열기
         function openChatRoom(artistId) {
             currentChatArtistId = artistId;
             const artist = artists.find(a => a.id === artistId);
@@ -815,7 +816,7 @@
             renderChatList();
         }
 
-        // 채팅 메시지 렌더링 (팬 vs 아티스트 좌/우 및 색상 분기 처리)
+        // 메시지 렌더링 (아티스트 채팅은 하늘색으로 구분)
         function renderMessages() {
             const container = document.getElementById('chatMessages');
             container.innerHTML = '';
@@ -827,21 +828,17 @@
                 const bubble = document.createElement('div');
                 
                 if (isIAtmArtist) {
-                    // 내가 이 방의 아티스트인 경우
+                    // 내가 아티스트인 경우: 내가 보낸건 오른쪽 하늘색, 팬이 보낸건 왼쪽 하얀색
                     if (msg.isArtistSender) {
-                        // 내가 보낸 메시지: 오른쪽 / 하늘색
-                        bubble.className = 'msg-bubble blue';
+                        bubble.className = 'msg-bubble artist-sky-right';
                     } else {
-                        // 팬들이 보낸 메시지: 왼쪽 / 흰색
                         bubble.className = 'msg-bubble white-left';
                     }
                 } else {
-                    // 내가 팬인 입장일 경우
+                    // 내가 팬인 경우: 아티스트가 보낸건 왼쪽 하늘색, 내가 보낸건 오른쪽 하얀색
                     if (msg.isArtistSender) {
-                        // 아티스트가 보낸 메시지: 왼쪽 / 흰색
-                        bubble.className = 'msg-bubble white-left';
+                        bubble.className = 'msg-bubble artist-sky';
                     } else {
-                        // 내가 보낸 메시지: 오른쪽 / 흰색
                         bubble.className = 'msg-bubble white-right';
                     }
                 }
@@ -852,7 +849,6 @@
             container.scrollTop = container.scrollHeight;
         }
 
-        // 메시지 전송
         function sendChatMessage() {
             const input = document.getElementById('chatInput');
             const text = input.value.trim();
@@ -871,7 +867,7 @@
             renderMessages();
         }
 
-        // 회원가입 및 정보 저장
+        // 회원가입 / 정보변경 (중복확인 및 아이디변경 동일인 간주 로직 반영)
         function saveUserInfo() {
             const nick = document.getElementById('inputNickname').value.trim();
             const uid = document.getElementById('inputUserId').value.trim();
@@ -881,22 +877,58 @@
                 return;
             }
 
+            const oldUserId = currentUser.userId;
             const isEdit = isSignedUp;
+
+            // 아이디 중복 체크 (본인 기존 아이디가 아닌데 다른 사람이 이미 쓰고 있는 경우)
+            const duplicateUser = registeredUsers.find(u => u.userId === uid && u.userId !== oldUserId);
+            if (duplicateUser) {
+                showToast("이미 사용 중인 아이디입니다. 다른 아이디를 선택해주세요.");
+                return;
+            }
+
+            if (isEdit) {
+                // 아이디가 변경되었어도 닉네임이 달라도 동일인으로 간주하여 데이터 업데이트
+                const existingUserIndex = registeredUsers.findIndex(u => u.userId === oldUserId);
+                if (existingUserIndex !== -1) {
+                    registeredUsers[existingUserIndex] = { userId: uid, nickname: nick };
+                } else {
+                    registeredUsers.push({ userId: uid, nickname: nick });
+                }
+
+                // 관리자 연결 정보 및 아티스트 소유권 업데이트
+                artists.forEach(a => {
+                    if (a.linkedUserId === oldUserId) {
+                        a.linkedUserId = uid;
+                    }
+                });
+
+                // 물방울 신청 내역 및 알림 데이터 아이디 갱신
+                bubbleRequests.forEach(r => {
+                    if (r.userId === oldUserId) r.userId = uid;
+                });
+                if (userNotifications[oldUserId]) {
+                    userNotifications[uid] = userNotifications[oldUserId];
+                    delete userNotifications[oldUserId];
+                }
+            } else {
+                if (registeredUsers.some(u => u.userId === uid)) {
+                    showToast("이미 존재하는 아이디입니다. 다른 아이디를 선택해주세요.");
+                    return;
+                }
+                registeredUsers.push({ userId: uid, nickname: nick });
+            }
+
             currentUser = { nickname: nick, userId: uid };
             isSignedUp = true;
 
-            // gpepsl 입력 시 혜린 계정과 자동 연동
             if (uid === 'gpepsl') {
                 const hyerinArtist = artists.find(a => a.id === 'hyerin');
                 if (hyerinArtist) hyerinArtist.linkedUserId = 'gpepsl';
             }
 
-            if (!registeredUsers.some(u => u.userId === uid)) {
-                registeredUsers.push(currentUser);
-            }
-
             closeModal('signupModal');
-            showToast(isEdit ? "정보 변경 완료!" : "회원가입 완료!");
+            showToast(isEdit ? "프로필 정보가 업데이트되었습니다!" : "회원가입 완료!");
 
             document.getElementById('displayNickname').innerText = currentUser.nickname;
             document.getElementById('displayId').innerText = '@' + currentUser.userId;
@@ -906,7 +938,6 @@
             recalculateNotiCount();
         }
 
-        // 마이페이지 메뉴 렌더링
         function renderMypageMenu() {
             const menuList = document.getElementById('mypageMenuList');
             menuList.style.display = 'flex';
@@ -916,7 +947,7 @@
 
             const buttons = [
                 { title: '✏️ 닉네임 & 아이디 변경', action: () => openEditProfileModal() },
-                { title: '🎟️ 방울권 목록', action: () => openMyTicketsModal() },
+                { title: '🎟️️ 방울권 목록', action: () => openMyTicketsModal() },
                 { title: '💧 물방울 신청하기', action: () => requestBubble() },
                 { title: '🚪 로그아웃 / 회원 탈퇴', action: () => openModal('logoutModal') }
             ];
@@ -941,12 +972,10 @@
             openModal('signupModal');
         }
 
-        // 내 방울권 목록 모달 (아티스트 본인 이름 제외)
         function openMyTicketsModal() {
             const container = document.getElementById('myTicketList');
             container.innerHTML = '';
 
-            // 내 아티스트 계정 자신은 목록에서 필터링하여 제외
             const filteredTickets = subscribedTickets.filter(id => {
                 const artist = artists.find(a => a.id === id);
                 return !(artist && artist.linkedUserId === currentUser.userId);
@@ -971,10 +1000,15 @@
             openModal('ticketListModal');
         }
 
-        // 물방울 신청
+        // 물방울 신청 (gpepsl 및 이미 신청/아티스트인 경우 예외처리 반영, 멘트 간소화)
         function requestBubble() {
+            if (currentUser.userId === 'gpepsl' || artists.some(a => a.linkedUserId === currentUser.userId)) {
+                showToast("이미 아티스트이므로 물방울 신청이 불가능합니다.");
+                return;
+            }
+
             if (bubbleRequests.some(r => r.userId === currentUser.userId)) {
-                showToast("이미 물방울 신청을 하셨습니다!");
+                showToast("이미 신청하였습니다.");
                 return;
             }
 
@@ -984,11 +1018,11 @@
                 status: 'pending'
             });
 
-            showToast("관리자(gpepsl)에게 물방울 신청이 전달되었습니다!");
+            showToast("신청하였습니다.");
             recalculateNotiCount();
         }
 
-        // 알림 모달 열기 (알림 확인 후 빨간 숫자 배지 제거)
+        // 알림 모달 열기
         function openNotificationModal() {
             const container = document.getElementById('notiList');
             container.innerHTML = '';
@@ -1030,14 +1064,13 @@
                 }
             }
 
-            // 알림 확인 후 빨간 알림 숫자 제거
+            // 알림 확인 시 빨간 알림 뱃지 제거
             unreadNotiCount = 0;
             updateNotiBadge();
 
             openModal('notiModal');
         }
 
-        // 신청 승낙
         function approveBubble(applicantUserId) {
             const req = bubbleRequests.find(r => r.userId === applicantUserId);
             if (req) {
@@ -1052,7 +1085,6 @@
             }
         }
 
-        // 승낙 후 활동 이름 정하기 모달
         let currentNotiIndex = null;
         function openSetArtistNameModal(index) {
             currentNotiIndex = index;
@@ -1099,8 +1131,10 @@
             openModal('userListModal');
         }
 
-        // 단순 로그아웃
+        // 로그아웃 (확인창 및 알림/채팅 초기화 반영)
         function processLogout() {
+            if (!confirm("정말 로그아웃을 하시겠습니까?")) return;
+            
             isSignedUp = false;
             currentUser = { nickname: '', userId: '' };
             subscribedTickets = [];
@@ -1109,13 +1143,17 @@
             resetToInitialState();
         }
 
-        // 회원 탈퇴 (관리자 목록 및 데이터 완전 삭제)
+        // 회원 탈퇴 (확인창 및 물방울 데이터 삭제 반영)
         function processDeleteAccount() {
+            if (!confirm("정말 회원탈퇴를 하시겠습니까?")) return;
+
             const targetUid = currentUser.userId;
 
-            // 전체 가입 유저 목록에서 삭제 (관리자 화면에서도 안 뜨게 됨)
+            // 탈퇴한 유저가 등록했던 물방울 아티스트도 화면에서 삭제
+            artists = artists.filter(a => a.linkedUserId !== targetUid);
+
+            // 전체 유저 목록, 신청 내역 및 알림 삭제
             registeredUsers = registeredUsers.filter(u => u.userId !== targetUid);
-            // 아티스트 신청 목록 및 알림 내역 제거
             bubbleRequests = bubbleRequests.filter(r => r.userId !== targetUid);
             delete userNotifications[targetUid];
 
@@ -1124,7 +1162,7 @@
             subscribedTickets = [];
 
             closeModal('logoutModal');
-            showToast("회원 탈퇴가 완료되었습니다. 모든 정보가 삭제되었습니다.");
+            showToast("회원 탈퇴가 완료되었습니다.");
             resetToInitialState();
         }
 
