@@ -1,0 +1,344 @@
+<!DOCTYPE html>
+<html lang="ko">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
+    <title>광버블</title>
+    <link rel="manifest" href="manifest.json">
+    <!-- 고급스러운 서체(Cinzel & Montserrat) 로드 -->
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+    <link href="https://fonts.googleapis.com/css2?family=Cinzel:wght@700;800&family=Montserrat:wght@400;600;700&family=Noto+Sans+KR:wght@400;600;700&display=swap" rel="stylesheet">
+    
+    <style>
+        :root {
+            --primary-gradient: linear-gradient(135deg, #FF6B9B 0%, #FF8E53 50%, #FF4081 100%);
+            --glass-bg: rgba(255, 255, 255, 0.85);
+            --glass-border: rgba(255, 255, 255, 0.6);
+            --text-dark: #2C3E50;
+        }
+
+        * {
+            box-sizing: border-box;
+            margin: 0;
+            padding: 0;
+        }
+
+        body {
+            font-family: 'Noto Sans KR', 'Montserrat', sans-serif;
+            background: linear-gradient(180deg, #FFEBF2 0%, #F3E5F5 50%, #E8EAF6 100%);
+            min-height: 100vh;
+            display: flex;
+            justify-content: center;
+            align-items: flex-start;
+            padding: 24px 16px;
+            color: var(--text-dark);
+            overflow-x: hidden;
+        }
+
+        .container {
+            width: 100%;
+            max-width: 440px;
+            display: flex;
+            flex-direction: column;
+            gap: 20px;
+        }
+
+        /* 메인 히어로 타이틀 카드 */
+        .hero-card {
+            background: rgba(255, 255, 255, 0.7);
+            backdrop-filter: blur(16px);
+            -webkit-backdrop-filter: blur(16px);
+            border: 1px solid var(--glass-border);
+            border-radius: 28px;
+            padding: 36px 20px 28px;
+            text-align: center;
+            box-shadow: 0 20px 40px rgba(255, 107, 155, 0.15),
+                        0 2px 10px rgba(0, 0, 0, 0.03);
+            animation: floatIn 1.2s cubic-bezier(0.16, 1, 0.3, 1) forwards;
+            position: relative;
+            overflow: hidden;
+        }
+
+        /* 화려한 글로우 빛 효과 배경 */
+        .hero-card::before {
+            content: '';
+            position: absolute;
+            top: -50%;
+            left: -50%;
+            width: 200%;
+            height: 200%;
+            background: radial-gradient(circle, rgba(255,107,155,0.2) 0%, rgba(255,255,255,0) 60%);
+            animation: rotateGlow 10s linear infinite;
+            z-index: 0;
+        }
+
+        /* 고급스러운 영문 타이틀 & 모션 */
+        .brand-title {
+            font-family: 'Cinzel', serif;
+            font-size: 2.5rem;
+            font-weight: 800;
+            letter-spacing: 2px;
+            background: var(--primary-gradient);
+            -webkit-background-clip: text;
+            -webkit-text-fill-color: transparent;
+            position: relative;
+            z-index: 1;
+            animation: shineText 3s ease-in-out infinite, pulseScale 2.5s ease-in-out infinite;
+            text-shadow: 0 10px 20px rgba(255, 64, 129, 0.2);
+        }
+
+        .brand-sub {
+            font-size: 0.95rem;
+            color: #880E4F;
+            font-weight: 600;
+            margin-top: 6px;
+            letter-spacing: 1px;
+            position: relative;
+            z-index: 1;
+            opacity: 0.8;
+        }
+
+        /* PWA 설치 스텝 안내 영역 */
+        .guide-section {
+            display: flex;
+            flex-direction: column;
+            gap: 12px;
+        }
+
+        .section-title {
+            font-size: 1.05rem;
+            font-weight: 700;
+            color: #4A148C;
+            margin-left: 8px;
+            display: flex;
+            align-items: center;
+            gap: 6px;
+        }
+
+        .step-card {
+            background: var(--glass-bg);
+            backdrop-filter: blur(10px);
+            -webkit-backdrop-filter: blur(10px);
+            border: 1px solid rgba(255, 255, 255, 0.9);
+            border-radius: 20px;
+            padding: 18px 20px;
+            display: flex;
+            align-items: center;
+            gap: 16px;
+            box-shadow: 0 8px 20px rgba(0, 0, 0, 0.04);
+            animation: slideUp 0.8s cubic-bezier(0.16, 1, 0.3, 1) both;
+            transition: transform 0.2s ease, box-shadow 0.2s ease;
+        }
+
+        .step-card:nth-child(1) { animation-delay: 0.2s; }
+        .step-card:nth-child(2) { animation-delay: 0.35s; }
+        .step-card:nth-child(3) { animation-delay: 0.5s; }
+
+        .step-card:active {
+            transform: scale(0.98);
+        }
+
+        .step-num {
+            width: 38px;
+            height: 38px;
+            border-radius: 12px;
+            background: var(--primary-gradient);
+            color: white;
+            font-weight: 800;
+            font-size: 1.1rem;
+            display: flex;
+            justify-content: center;
+            align-items: center;
+            box-shadow: 0 4px 12px rgba(255, 64, 129, 0.3);
+            flex-shrink: 0;
+        }
+
+        .step-text {
+            font-size: 1.05rem;
+            font-weight: 700;
+            color: #333;
+            line-height: 1.3;
+        }
+
+        .step-icon {
+            margin-left: auto;
+            font-size: 1.3rem;
+            opacity: 0.7;
+        }
+
+        /* 버블 메시지 작성 입력창 */
+        .chat-container {
+            background: var(--glass-bg);
+            backdrop-filter: blur(12px);
+            -webkit-backdrop-filter: blur(12px);
+            border: 1px solid var(--glass-border);
+            border-radius: 24px;
+            padding: 20px;
+            box-shadow: 0 12px 30px rgba(0, 0, 0, 0.05);
+            display: flex;
+            flex-direction: column;
+            gap: 10px;
+        }
+
+        .input-field {
+            width: 100%;
+            padding: 14px 16px;
+            border-radius: 14px;
+            border: 1px solid rgba(0,0,0,0.08);
+            background: rgba(255, 255, 255, 0.9);
+            font-size: 0.95rem;
+            outline: none;
+            transition: all 0.3s ease;
+            font-family: inherit;
+        }
+
+        .input-field:focus {
+            border-color: #FF4081;
+            box-shadow: 0 0 0 4px rgba(255, 64, 129, 0.15);
+            background: #fff;
+        }
+
+        .send-btn {
+            width: 100%;
+            padding: 15px;
+            border-radius: 14px;
+            border: none;
+            background: var(--primary-gradient);
+            color: white;
+            font-size: 1rem;
+            font-weight: 700;
+            cursor: pointer;
+            box-shadow: 0 6px 18px rgba(255, 64, 129, 0.35);
+            transition: transform 0.2s ease, box-shadow 0.2s ease;
+        }
+
+        .send-btn:active {
+            transform: scale(0.97);
+            box-shadow: 0 3px 10px rgba(255, 64, 129, 0.2);
+        }
+
+        /* 메시지 리스트 */
+        #memoList {
+            list-style: none;
+            display: flex;
+            flex-direction: column;
+            gap: 10px;
+        }
+
+        .memo-item {
+            background: white;
+            padding: 16px;
+            border-radius: 16px;
+            border-left: 5px solid #FF4081;
+            box-shadow: 0 4px 15px rgba(0, 0, 0, 0.03);
+            animation: popIn 0.4s ease-out;
+        }
+
+        .memo-sender {
+            font-weight: 700;
+            color: #FF4081;
+            font-size: 0.9rem;
+            margin-bottom: 4px;
+        }
+
+        .memo-content {
+            color: #444;
+            font-size: 0.98rem;
+            word-break: break-all;
+        }
+
+        /* 애니메이션 키프레임 */
+        @keyframes floatIn {
+            0% { opacity: 0; transform: translateY(-30px) scale(0.9); }
+            100% { opacity: 1; transform: translateY(0) scale(1); }
+        }
+
+        @keyframes slideUp {
+            0% { opacity: 0; transform: translateY(20px); }
+            100% { opacity: 1; transform: translateY(0); }
+        }
+
+        @keyframes popIn {
+            0% { opacity: 0; transform: scale(0.8); }
+            100% { opacity: 1; transform: scale(1); }
+        }
+
+        @keyframes pulseScale {
+            0%, 100% { transform: scale(1); }
+            50% { transform: scale(1.03); }
+        }
+
+        @keyframes rotateGlow {
+            0% { transform: rotate(0deg); }
+            100% { transform: rotate(360deg); }
+        }
+    </style>
+</head>
+<body>
+
+<div class="container">
+    <!-- 메인 타이틀 (GuangBubble) -->
+    <div class="hero-card">
+        <div class="brand-title">GuangBubble</div>
+        <div class="brand-sub">광버블 공식 앱</div>
+    </div>
+
+    <!-- 설치 방법 안내 3단계 -->
+    <div class="guide-section">
+        <div class="section-title">📱 앱으로 간편하게 추가하기</div>
+        
+        <div class="step-card">
+            <div class="step-num">1</div>
+            <div class="step-text">하단 공유 버튼(⬆️) 클릭!</div>
+            <div class="step-icon">📤</div>
+        </div>
+
+        <div class="step-card">
+            <div class="step-num">2</div>
+            <div class="step-text">메뉴에서 더보기 클릭!</div>
+            <div class="step-icon">⋯</div>
+        </div>
+
+        <div class="step-card">
+            <div class="step-num">3</div>
+            <div class="step-text">홈 화면에 추가하기 클릭!</div>
+            <div class="step-icon">➕</div>
+        </div>
+    </div>
+
+    <!-- 메시지 입력 영역 -->
+    <div class="chat-container">
+        <input type="text" id="nicknameInput" class="input-field" placeholder="닉네임을 입력하세요">
+        <input type="text" id="memoInput" class="input-field" placeholder="메시지를 적어주세요...">
+        <button class="send-btn" onclick="addMessage()">버블 메시지 보내기 ✨</button>
+    </div>
+
+    <!-- 작성된 메시지 리스트 -->
+    <ul id="memoList"></ul>
+</div>
+
+<script>
+    function addMessage() {
+        const nickname = document.getElementById('nicknameInput').value.trim() || '익명버블';
+        const input = document.getElementById('memoInput');
+        const text = input.value.trim();
+        
+        if (!text) return;
+        
+        const li = document.createElement('li');
+        li.className = 'memo-item';
+        li.innerHTML = `
+            <div class="memo-sender">💬 ${nickname}</div>
+            <div class="memo-content">${text}</div>
+        `;
+        
+        const list = document.getElementById('memoList');
+        list.insertBefore(li, list.firstChild);
+        
+        input.value = '';
+    }
+</script>
+
+</body>
+</html>
