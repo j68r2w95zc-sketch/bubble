@@ -5,7 +5,6 @@
     <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
     <title>광버블</title>
     <link rel="manifest" href="manifest.json">
-    <!-- 귀여운 눈누 폰트 및 Cinzel 로드 -->
     <link rel="preconnect" href="https://fonts.googleapis.com">
     <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
     <link href="https://fonts.googleapis.com/css2?family=Cinzel:wght@700;800&family=Jua&display=swap" rel="stylesheet">
@@ -13,8 +12,8 @@
     <style>
         :root {
             --sky-bg: linear-gradient(180deg, #E0F7FA 0%, #B3E5FC 50%, #E1F5FE 100%);
-            --glass-bg: rgba(255, 255, 255, 0.85);
-            --glass-border: rgba(255, 255, 255, 0.9);
+            --glass-bg: rgba(255, 255, 255, 0.88);
+            --glass-border: rgba(255, 255, 255, 0.95);
             --primary-blue: #0288D1;
             --accent-pink: #FF4081;
         }
@@ -32,21 +31,18 @@
             display: flex;
             justify-content: center;
             align-items: flex-start;
-            padding: 16px;
+            padding: 12px;
             color: #333;
             overflow-x: hidden;
         }
 
-        /* 1. 사파리 첫 진입 시 인트로 스플래시 화면 (GuangBubble 샤라락 애니메이션) */
+        /* 1. 인트로 스플래시 화면 */
         #splashScreen {
             position: fixed;
-            top: 0;
-            left: 0;
-            width: 100%;
-            height: 100%;
+            top: 0; left: 0;
+            width: 100%; height: 100%;
             background: var(--sky-bg);
             display: flex;
-            flex-direction: column;
             justify-content: center;
             align-items: center;
             z-index: 9999;
@@ -55,7 +51,7 @@
 
         .splash-title {
             font-family: 'Cinzel', serif;
-            font-size: 2.8rem;
+            font-size: 2.5rem;
             font-weight: 800;
             color: #01579B;
             letter-spacing: 2px;
@@ -68,7 +64,7 @@
 
         @keyframes typing {
             from { width: 0; }
-            to { width: 310px; }
+            to { width: 320px; }
         }
 
         @keyframes glowPulse {
@@ -76,139 +72,135 @@
             to { text-shadow: 0 0 25px rgba(2, 136, 209, 0.7), 0 0 5px #FFF; }
         }
 
-        /* 컨테이너 공통 */
         .container {
             width: 100%;
             max-width: 440px;
-            display: none; /* JS로 제어 */
+            display: none;
             flex-direction: column;
-            gap: 16px;
+            gap: 12px;
             padding-bottom: 90px;
+            min-height: 90vh;
         }
 
-        /* 카드 스타일 */
+        /* 상단 네비게이션 헤더 (알림 포함) */
+        .top-app-bar {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            padding: 6px 10px;
+        }
+
+        .app-title {
+            font-family: 'Cinzel', serif;
+            font-size: 1.5rem;
+            font-weight: 800;
+            color: #01579B;
+        }
+
+        .noti-btn {
+            position: relative;
+            background: white;
+            border: 1px solid #B3E5FC;
+            border-radius: 50%;
+            width: 40px;
+            height: 40px;
+            display: flex;
+            justify-content: center;
+            align-items: center;
+            cursor: pointer;
+            box-shadow: 0 4px 10px rgba(0,0,0,0.05);
+        }
+
+        .noti-badge {
+            position: absolute;
+            top: -2px;
+            right: -2px;
+            background: var(--accent-pink);
+            color: white;
+            font-size: 0.75rem;
+            font-weight: bold;
+            border-radius: 10px;
+            padding: 2px 6px;
+            display: none;
+        }
+
+        /* 카드 박스 높이 확대 */
         .card-box {
             background: var(--glass-bg);
             backdrop-filter: blur(14px);
-            -webkit-backdrop-filter: blur(14px);
             border: 1px solid var(--glass-border);
             border-radius: 24px;
             padding: 20px;
             box-shadow: 0 10px 30px rgba(2, 136, 209, 0.1);
+            min-height: 75vh;
+            display: flex;
+            flex-direction: column;
         }
 
         .hero-card {
-            background: rgba(255, 255, 255, 0.7);
-            backdrop-filter: blur(16px);
-            -webkit-backdrop-filter: blur(16px);
-            border: 1px solid var(--glass-border);
+            background: rgba(255, 255, 255, 0.8);
             border-radius: 28px;
             padding: 30px 20px;
             text-align: center;
-            box-shadow: 0 15px 35px rgba(2, 136, 209, 0.12);
+            box-shadow: 0 10px 25px rgba(2, 136, 209, 0.1);
         }
 
-        .brand-title {
-            font-family: 'Cinzel', serif;
-            font-size: 2.3rem;
-            font-weight: 800;
-            letter-spacing: 2px;
-            color: #01579B;
-        }
-
-        /* 사파리 전용 3단계 설치 가이드 스타일 */
+        /* 사파리 안내 */
         .guide-section {
             display: flex;
             flex-direction: column;
             gap: 12px;
         }
-
-        .section-title {
-            font-size: 1.1rem;
-            font-weight: 700;
-            color: #01579B;
-            margin-left: 4px;
-        }
-
         .step-card {
             background: var(--glass-bg);
-            backdrop-filter: blur(10px);
-            border: 1px solid rgba(255, 255, 255, 0.9);
             border-radius: 20px;
-            padding: 16px 20px;
+            padding: 16px;
             display: flex;
             align-items: center;
-            gap: 16px;
-            box-shadow: 0 8px 20px rgba(0, 0, 0, 0.04);
+            gap: 14px;
         }
-
         .step-num {
-            width: 36px;
-            height: 36px;
-            border-radius: 12px;
-            background: #0288D1;
-            color: white;
-            font-weight: bold;
-            display: flex;
-            justify-content: center;
-            align-items: center;
-            flex-shrink: 0;
+            width: 32px; height: 32px; border-radius: 10px; background: #0288D1; color: white;
+            display: flex; justify-content: center; align-items: center; font-weight: bold;
         }
 
-        .step-text {
-            font-size: 1.05rem;
-            color: #333;
-        }
-
-        .step-icon {
-            margin-left: auto;
-            font-size: 1.2rem;
-        }
-
-        /* 본 화면 컴포넌트들 */
         .top-header {
-            font-size: 1.4rem;
+            font-size: 1.3rem;
             color: #01579B;
-            margin-bottom: 12px;
+            margin-bottom: 14px;
             display: flex;
             align-items: center;
-            gap: 6px;
+            justify-content: space-between;
         }
 
+        /* 아티스트 목록 */
         .artist-list {
             display: flex;
             flex-direction: column;
+            gap: 6px;
+            overflow-y: auto;
+            flex: 1;
         }
 
         .artist-item {
             display: flex;
             align-items: center;
             gap: 14px;
-            padding: 12px 8px;
-            border-bottom: 1px solid rgba(2, 136, 209, 0.1);
-        }
-
-        .artist-item:last-child {
-            border-bottom: none;
-        }
-
-        .artist-item.clickable {
+            padding: 12px 10px;
+            border-bottom: 1px solid rgba(2, 136, 209, 0.08);
+            border-radius: 12px;
             cursor: pointer;
         }
-        .artist-item.clickable:active {
-            background: rgba(2, 136, 209, 0.05);
-            border-radius: 12px;
+        .artist-item:active {
+            background: rgba(2, 136, 209, 0.08);
         }
 
         .profile-img {
-            width: 50px;
-            height: 50px;
+            width: 48px; height: 48px;
             border-radius: 50%;
             background: #B3E5FC;
-            display: flex;
-            justify-content: center;
-            align-items: center;
-            font-size: 1.5rem;
+            display: flex; justify-content: center; align-items: center;
+            font-size: 1.4rem;
             border: 2px solid #0288D1;
             flex-shrink: 0;
         }
@@ -217,426 +209,367 @@
             display: flex;
             flex-direction: column;
         }
+        .artist-name { font-size: 1.1rem; color: #333; }
+        .artist-status { font-size: 0.85rem; color: #666; }
 
-        .artist-name {
-            font-size: 1.15rem;
-            color: #333;
-        }
-
-        .artist-status {
-            font-size: 0.85rem;
-            color: #666;
-        }
-
-        /* 혜린 방울권 구독 상세 뷰 */
+        /* 상세 뷰 & 채팅 뷰 */
         .sub-view {
             display: none;
             flex-direction: column;
             align-items: center;
             text-align: center;
             gap: 16px;
-            padding: 30px 20px;
+            padding: 20px 10px;
+            flex: 1;
         }
 
         .sub-profile-img {
-            width: 100px;
-            height: 100px;
-            border-radius: 50%;
-            background: #81D4FA;
-            display: flex;
-            justify-content: center;
-            align-items: center;
-            font-size: 3rem;
-            border: 3px solid #0288D1;
-            box-shadow: 0 8px 20px rgba(2, 136, 209, 0.2);
-        }
-
-        .sub-name {
-            font-size: 1.8rem;
-            color: #01579B;
+            width: 90px; height: 90px;
+            border-radius: 50%; background: #81D4FA;
+            display: flex; justify-content: center; align-items: center;
+            font-size: 2.8rem; border: 3px solid #0288D1;
         }
 
         .subscribe-btn {
             background: linear-gradient(135deg, #03A9F4, #00BCD4);
-            color: white;
-            border: none;
-            padding: 12px 28px;
-            border-radius: 20px;
-            font-size: 1.1rem;
-            cursor: pointer;
+            color: white; border: none; padding: 12px 28px;
+            border-radius: 20px; font-size: 1.05rem; cursor: pointer;
             box-shadow: 0 6px 15px rgba(3, 169, 244, 0.3);
         }
 
-        .back-link {
+        .subscribed-tag {
+            background: #E0F7FA;
             color: #0288D1;
-            font-size: 0.95rem;
-            cursor: pointer;
-            text-decoration: underline;
-            margin-top: 10px;
+            padding: 10px 20px;
+            border-radius: 16px;
+            font-size: 1rem;
+            border: 1px solid #B3E5FC;
+        }
+
+        .back-link {
+            color: #0288D1; font-size: 0.95rem; cursor: pointer; text-decoration: underline; margin-top: 6px;
+        }
+
+        /* 버블 채팅 화면 */
+        .chat-room-container {
+            display: none;
+            flex-direction: column;
+            height: 100%;
+            flex: 1;
+        }
+
+        .chat-messages {
+            flex: 1;
+            background: rgba(255,255,255,0.5);
+            border-radius: 18px;
+            padding: 14px;
+            overflow-y: auto;
+            display: flex;
+            flex-direction: column;
+            gap: 12px;
+            min-height: 400px;
+            max-height: 520px;
+        }
+
+        .msg-bubble {
+            max-width: 78%;
+            padding: 10px 14px;
+            border-radius: 16px;
+            font-size: 0.98rem;
+            line-height: 1.4;
+            word-break: break-word;
+            box-shadow: 0 2px 6px rgba(0,0,0,0.04);
+        }
+
+        /* 말풍선 색상 처리 */
+        .msg-bubble.blue {
+            background: #B3E5FC;
+            color: #01579B;
+            align-self: flex-end;
+            border-bottom-right-radius: 4px;
+        }
+        .msg-bubble.white {
+            background: #FFFFFF;
+            color: #333;
+            align-self: flex-end;
+            border-bottom-right-radius: 4px;
+        }
+        .msg-bubble.other {
+            background: #FFFFFF;
+            color: #333;
+            align-self: flex-start;
+            border-bottom-left-radius: 4px;
+        }
+
+        .chat-input-area {
+            display: flex; gap: 8px; margin-top: 10px;
+        }
+
+        .chat-input {
+            flex: 1; padding: 12px 14px; border-radius: 14px;
+            border: 1px solid #B3E5FC; outline: none; background: white; font-size: 0.95rem;
+        }
+
+        .chat-send-btn {
+            background: #0288D1; color: white; border: none; padding: 0 18px;
+            border-radius: 14px; cursor: pointer; font-size: 0.95rem;
+        }
+
+        /* 마이페이지 버튼 세트 */
+        .mypage-container {
+            display: flex; flex-direction: column; align-items: center; padding: 20px 10px; gap: 16px; text-align: center;
+        }
+
+        .mypage-avatar {
+            width: 80px; height: 80px; border-radius: 50%; background: #E1F5FE;
+            border: 2px dashed #0288D1; display: flex; justify-content: center; align-items: center; font-size: 2.2rem;
+        }
+
+        .menu-btn-list {
+            width: 100%; display: flex; flex-direction: column; gap: 10px; margin-top: 10px;
+        }
+
+        .menu-btn {
+            width: 100%; padding: 14px; border-radius: 16px; border: 1px solid #B3E5FC;
+            background: white; color: #01579B; font-size: 1rem; cursor: pointer;
+            box-shadow: 0 4px 12px rgba(2,136,209,0.05); text-align: left; display: flex; justify-content: space-between; align-items: center;
+        }
+
+        .signup-trigger-btn {
+            background: #0288D1; color: white; border: none; padding: 12px 28px; border-radius: 16px; font-size: 1.05rem; cursor: pointer; margin-top: 10px;
+        }
+
+        /* 모달 공통 */
+        .modal-overlay {
+            position: fixed; top: 0; left: 0; width: 100%; height: 100%;
+            background: rgba(0,0,0,0.4); display: none; justify-content: center; align-items: center; z-index: 9000; backdrop-filter: blur(4px);
+        }
+
+        .modal-content {
+            background: white; width: 88%; max-width: 360px; padding: 22px; border-radius: 22px;
+            display: flex; flex-direction: column; gap: 14px; position: relative; box-shadow: 0 15px 35px rgba(0,0,0,0.2);
+        }
+
+        .close-modal {
+            position: absolute; top: 14px; right: 16px; font-size: 1.3rem; cursor: pointer; color: #888;
+        }
+
+        .modal-input {
+            width: 100%; padding: 12px 14px; border-radius: 12px; border: 1px solid #B3E5FC; background: #F1F8FE; font-size: 0.95rem; outline: none;
+        }
+
+        .modal-save-btn {
+            background: #0288D1; color: white; border: none; padding: 12px; border-radius: 12px; font-size: 1rem; cursor: pointer;
         }
 
         /* 토스트 팝업 */
         #toastPopup {
-            position: fixed;
-            top: 20px;
-            left: 50%;
-            transform: translateX(-50%) translateY(-100px);
-            background: rgba(1, 87, 155, 0.95);
-            color: white;
-            padding: 14px 28px;
-            border-radius: 30px;
-            font-size: 1.05rem;
-            box-shadow: 0 10px 25px rgba(0,0,0,0.2);
-            transition: transform 0.4s cubic-bezier(0.175, 0.885, 0.32, 1.275);
-            z-index: 10000;
+            position: fixed; top: 20px; left: 50%; transform: translateX(-50%) translateY(-100px);
+            background: rgba(1, 87, 155, 0.95); color: white; padding: 12px 24px; border-radius: 30px;
+            font-size: 1rem; box-shadow: 0 10px 25px rgba(0,0,0,0.2); transition: transform 0.4s cubic-bezier(0.175, 0.885, 0.32, 1.275); z-index: 10000;
         }
-        #toastPopup.show {
-            transform: translateX(-50%) translateY(0);
-        }
+        #toastPopup.show { transform: translateX(-50%) translateY(0); }
 
-        /* 마이페이지 */
-        .mypage-container {
-            display: flex;
-            flex-direction: column;
-            align-items: center;
-            padding: 30px 20px;
-            gap: 16px;
-            text-align: center;
-        }
-
-        .mypage-avatar {
-            width: 90px;
-            height: 90px;
-            border-radius: 50%;
-            background: #E1F5FE;
-            border: 2px dashed #0288D1;
-            display: flex;
-            justify-content: center;
-            align-items: center;
-            font-size: 2.5rem;
-        }
-
-        .mypage-title {
-            font-size: 1.5rem;
-            color: #01579B;
-        }
-
-        .mypage-id {
-            font-size: 0.95rem;
-            color: #78909C;
-        }
-
-        .signup-trigger-btn {
-            background: #0288D1;
-            color: white;
-            border: none;
-            padding: 10px 24px;
-            border-radius: 16px;
-            font-size: 1rem;
-            cursor: pointer;
-            margin-top: 10px;
-        }
-
-        /* 회원가입 모달 */
-        #signupModal {
-            position: fixed;
-            top: 0; left: 0; width: 100%; height: 100%;
-            background: rgba(0,0,0,0.4);
-            display: none;
-            justify-content: center;
-            align-items: center;
-            z-index: 9000;
-            backdrop-filter: blur(5px);
-        }
-
-        .modal-content {
-            background: white;
-            width: 90%;
-            max-width: 360px;
-            padding: 24px;
-            border-radius: 24px;
-            display: flex;
-            flex-direction: column;
-            gap: 14px;
-            position: relative;
-            box-shadow: 0 15px 35px rgba(0,0,0,0.2);
-        }
-
-        .close-modal {
-            position: absolute;
-            top: 16px; right: 18px;
-            font-size: 1.3rem;
-            cursor: pointer;
-            color: #888;
-        }
-
-        .modal-input {
-            width: 100%;
-            padding: 12px 14px;
-            border-radius: 12px;
-            border: 1px solid #B3E5FC;
-            background: #F1F8FE;
-            font-size: 1rem;
-            outline: none;
-        }
-
-        .input-hint {
-            font-size: 0.8rem;
-            color: #78909C;
-            text-align: left;
-            margin-top: -8px;
-            margin-left: 4px;
-        }
-
-        .modal-save-btn {
-            background: #0288D1;
-            color: white;
-            border: none;
-            padding: 12px;
-            border-radius: 12px;
-            font-size: 1.05rem;
-            cursor: pointer;
-        }
-
-        /* 강제 회원가입 팝업 */
-        #alertModal {
-            position: fixed;
-            top: 0; left: 0; width: 100%; height: 100%;
-            background: rgba(0,0,0,0.4);
-            display: none;
-            justify-content: center;
-            align-items: center;
-            z-index: 9500;
-            backdrop-filter: blur(5px);
-        }
-
-        .alert-box {
-            background: white;
-            width: 85%;
-            max-width: 320px;
-            padding: 24px;
-            border-radius: 20px;
-            text-align: center;
-            display: flex;
-            flex-direction: column;
-            gap: 16px;
-            position: relative;
-        }
-
-        .alert-text {
-            font-size: 1.1rem;
-            color: #333;
-            margin-top: 10px;
-        }
-
-        .alert-link {
-            color: #0288D1;
-            text-decoration: underline;
-            cursor: pointer;
-            font-weight: bold;
-        }
-
-        /* 하단 네비게이션 바 (투명 버튼 3개) */
+        /* 하단 투명 네비게이션 바 */
         .nav-bar {
-            position: fixed;
-            bottom: 0; left: 50%;
-            transform: translateX(-50%);
-            width: 100%;
-            max-width: 440px;
-            background: rgba(255, 255, 255, 0.75);
-            backdrop-filter: blur(12px);
-            border-top: 2px solid #222;
-            display: flex;
-            justify-content: space-around;
-            padding: 10px 0;
-            z-index: 1000;
+            position: fixed; bottom: 0; left: 50%; transform: translateX(-50%);
+            width: 100%; max-width: 440px; background: rgba(255, 255, 255, 0.8); backdrop-filter: blur(12px);
+            border-top: 2px solid #222; display: flex; justify-content: space-around; padding: 10px 0; z-index: 1000;
         }
 
         .nav-btn {
-            background: transparent;
-            border: 2px solid #222;
-            width: 55px;
-            height: 55px;
-            border-radius: 16px;
-            display: flex;
-            justify-content: center;
-            align-items: center;
-            cursor: pointer;
-            transition: transform 0.15s, background 0.15s;
+            background: transparent; border: 2px solid #222; width: 52px; height: 52px; border-radius: 16px;
+            display: flex; justify-content: center; align-items: center; cursor: pointer; transition: transform 0.15s;
         }
 
-        .nav-btn:active, .nav-btn.active {
-            transform: scale(0.92);
-            background: rgba(2, 136, 209, 0.15);
-            border-color: #0288D1;
-        }
-
-        .nav-btn svg {
-            width: 28px; height: 28px;
-            fill: none; stroke: #222;
-            stroke-width: 2; stroke-linecap: round; stroke-linejoin: round;
-        }
-        .nav-btn.active svg {
-            stroke: #0288D1;
-        }
+        .nav-btn:active, .nav-btn.active { transform: scale(0.92); background: rgba(2, 136, 209, 0.15); border-color: #0288D1; }
+        .nav-btn svg { width: 26px; height: 26px; fill: none; stroke: #222; stroke-width: 2; stroke-linecap: round; stroke-linejoin: round; }
+        .nav-btn.active svg { stroke: #0288D1; }
 
         .tab-content { display: none; }
-        .tab-content.active { display: flex; flex-direction: column; gap: 16px; }
+        .tab-content.active { display: flex; flex-direction: column; flex: 1; }
     </style>
 </head>
 <body>
 
-    <!-- 1. 인트로 스플래시 애니메이션 (2초 후 전환) -->
+    <!-- 1. 인트로 스플래시 애니메이션 -->
     <div id="splashScreen">
         <div class="splash-title">GuangBubble</div>
     </div>
 
     <!-- 토스트 팝업 -->
-    <div id="toastPopup">방울권 끊기 성공!</div>
+    <div id="toastPopup">메시지</div>
 
-    <!-- [A] 사파리 브라우저로 처음 들어왔을 때 보이는 설치 가이드 화면 -->
+    <!-- [A] 사파리 가이드 화면 -->
     <div class="container" id="safariGuideContainer">
-        <div class="hero-card">
-            <div class="brand-title">GuangBubble</div>
-        </div>
+        <div class="hero-card"><div class="splash-title" style="animation:none; width:auto; border:none; font-size:2.2rem;">GuangBubble</div></div>
         <div class="guide-section">
-            <div class="section-title">📱 앱으로 간편하게 추가하기</div>
-            <div class="step-card">
-                <div class="step-num">1</div>
-                <div class="step-text">하단 공유 버튼(⬆) 클릭!</div>
-                <div class="step-icon">📤</div>
-            </div>
-            <div class="step-card">
-                <div class="step-num">2</div>
-                <div class="step-text">메뉴에서 더보기 클릭!</div>
-                <div class="step-icon">⋯</div>
-            </div>
-            <div class="step-card">
-                <div class="step-num">3</div>
-                <div class="step-text">홈 화면에 추가하기 클릭!</div>
-                <div class="step-icon">➕</div>
-            </div>
+            <div style="font-size: 1.05rem; color: #01579B; margin-left: 4px;">📱 앱으로 홈 화면에 추가하기</div>
+            <div class="step-card"><div class="step-num">1</div><div>하단 공유 버튼(⬆) 클릭!</div></div>
+            <div class="step-card"><div class="step-num">2</div><div>메뉴에서 더보기 클릭!</div></div>
+            <div class="step-card"><div class="step-num">3</div><div>홈 화면에 추가하기 클릭!</div></div>
         </div>
     </div>
 
-    <!-- [B] 홈 화면에 추가된 앱(Standalone)으로 들어왔을 때만 보이는 본 화면 컨테이너 -->
+    <!-- [B] 메인 앱 컨테이너 -->
     <div class="container" id="appMainContainer">
+        
+        <!-- 상단 헤더 & 알림 버튼 -->
+        <div class="top-app-bar">
+            <div class="app-title">GuangBubble</div>
+            <div class="noti-btn" onclick="openNotificationModal()">
+                🔔 <span class="noti-badge" id="notiBadge">0</span>
+            </div>
+        </div>
 
-        <!-- 탭 1: 물방울 목록 및 구독 -->
-        <div id="tab1" class="tab-content active">
-            <div id="artistListView" class="card-box">
+        <!-- 탭 1: 물방울 (아티스트 목록 및 방울권) -->
+        <div id="tab1" class="tab-content active card-box">
+            <div id="artistListView">
                 <div class="top-header">물방울 💧</div>
-                <div class="artist-list">
-                    <div class="artist-item clickable" onclick="openHyerinDetail()">
-                        <div class="profile-img">👩🏻</div>
-                        <div class="artist-info">
-                            <span class="artist-name">혜린</span>
-                            <span class="artist-status">광버블 공식 아티스트 ✨</span>
-                        </div>
-                    </div>
-                    <div class="artist-item"><div class="profile-img">👤</div><div class="artist-info"><span class="artist-name">가은</span><span class="artist-status">물방울 아티스트</span></div></div>
-                    <div class="artist-item"><div class="profile-img">👤</div><div class="artist-info"><span class="artist-name">나연</span><span class="artist-status">물방울 아티스트</span></div></div>
-                    <div class="artist-item"><div class="profile-img">👤</div><div class="artist-info"><span class="artist-name">다현</span><span class="artist-status">물방울 아티스트</span></div></div>
-                    <div class="artist-item"><div class="profile-img">👤</div><div class="artist-info"><span class="artist-name">라희</span><span class="artist-status">물방울 아티스트</span></div></div>
-                    <div class="artist-item"><div class="profile-img">👤</div><div class="artist-info"><span class="artist-name">민서</span><span class="artist-status">물방울 아티스트</span></div></div>
-                    <div class="artist-item"><div class="profile-img">👤</div><div class="artist-info"><span class="artist-name">서윤</span><span class="artist-status">물방울 아티스트</span></div></div>
-                    <div class="artist-item"><div class="profile-img">👤</div><div class="artist-info"><span class="artist-name">지우</span><span class="artist-status">물방울 아티스트</span></div></div>
+                <div class="artist-list" id="artistListContainer">
+                    <!-- JS로 동적 생성 -->
                 </div>
             </div>
 
-            <!-- 혜린 방울권 상세 뷰 -->
-            <div id="hyerinDetailView" class="card-box sub-view">
-                <div class="sub-profile-img">👩🏻</div>
-                <div class="sub-name">혜린</div>
-                <button class="subscribe-btn" onclick="buyBangwoolTicket()">방울권 끊기</button>
-                <div class="back-link" onclick="closeHyerinDetail()">← 목록으로 돌아가기</div>
-            </div>
-
-            <!-- 혜린 채팅방 뷰 -->
-            <div id="hyerinChatRoom" class="card-box sub-view" style="padding: 20px;">
-                <div class="top-header" style="justify-content: space-between; width: 100%;">
-                    <span>💬 혜린과의 버블 채팅</span>
-                    <span class="back-link" style="margin:0;" onclick="exitChatRoom()">나가기</span>
-                </div>
-                <div style="background: rgba(255,255,255,0.6); border-radius: 16px; padding: 15px; width: 100%; min-height: 200px; display: flex; flex-direction: column; justify-content: flex-end; gap: 10px;">
-                    <div style="background: white; padding: 10px 14px; border-radius: 14px; align-self: flex-start; max-width: 80%; text-align: left; box-shadow: 0 2px 8px rgba(0,0,0,0.05);">
-                        안녕! 광버블에 온 걸 환영해 물방울들 💧✨ 앞으로 자주 대화하자!
-                    </div>
-                </div>
-                <div style="display: flex; width: 100%; gap: 8px; margin-top: 5px;">
-                    <input type="text" placeholder="메시지를 입력하세요..." style="flex:1; padding: 10px 14px; border-radius: 12px; border: 1px solid #B3E5FC; outline: none; background: #FFF;">
-                    <button style="background: #0288D1; color: white; border: none; padding: 0 16px; border-radius: 12px; cursor: pointer;">전송</button>
-                </div>
+            <!-- 아티스트 상세 뷰 (방울권 구매/확인) -->
+            <div id="artistDetailView" class="sub-view">
+                <div class="sub-profile-img" id="detailAvatar">👤</div>
+                <div class="sub-name" id="detailName">아티스트</div>
+                <div id="subscribeActionArea"></div>
+                <div class="back-link" onclick="closeArtistDetail()">← 목록으로 돌아가기</div>
             </div>
         </div>
 
         <!-- 탭 2: 채팅 화면 -->
         <div id="tab2" class="tab-content card-box">
-            <div class="top-header">채팅 목록 💭</div>
-            <div id="chatListContainer">
-                <div style="text-align: center; padding: 40px 20px; color: #78909C;">
-                    구독한 아티스트가 없습니다.<br>방울권을 먼저 끊어주세요! 💧
+            <div id="chatListView">
+                <div class="top-header">채팅 목록 💭</div>
+                <div class="artist-list" id="chatListContainer">
+                    <div style="text-align: center; padding: 40px 20px; color: #78909C;">
+                        구독 중인 물방울이 없습니다.<br>먼저 방울권을 끊어주세요! 💧
+                    </div>
+                </div>
+            </div>
+
+            <!-- 개별 채팅방 뷰 -->
+            <div id="chatRoomView" class="chat-room-container">
+                <div class="top-header" style="margin-bottom:8px;">
+                    <span id="chatRoomTitle">💬 버블 채팅</span>
+                    <span class="back-link" style="margin:0;" onclick="closeChatRoom()">나가기</span>
+                </div>
+                <div class="chat-messages" id="chatMessages"></div>
+                <div class="chat-input-area">
+                    <input type="text" id="chatInput" class="chat-input" placeholder="메시지를 입력하세요..." onkeydown="if(event.key==='Enter') sendChatMessage()">
+                    <button class="chat-send-btn" onclick="sendChatMessage()">전송</button>
                 </div>
             </div>
         </div>
 
-        <!-- 탭 3: 마이페이지 화면 -->
+        <!-- 탭 3: 마이페이지 -->
         <div id="tab3" class="tab-content card-box mypage-container">
             <div class="mypage-avatar">🫧</div>
             <div id="userInfoArea">
-                <div class="mypage-title" id="displayNickname">비눗방울</div>
-                <div class="mypage-id" id="displayId">@guest_bubble</div>
+                <div class="mypage-title" id="displayNickname" style="font-size:1.4rem; color:#01579B;">비눗방울</div>
+                <div id="displayId" style="font-size:0.9rem; color:#78909C; margin-top:4px;">@guest_bubble</div>
                 <button class="signup-trigger-btn" id="signupTriggerBtn" onclick="openSignupModal()">회원가입</button>
             </div>
+            <div class="menu-btn-list" id="mypageMenuList" style="display: none;">
+                <!-- JS 동적 생성 -->
+            </div>
         </div>
 
     </div>
 
-    <!-- 회원가입 모달 -->
-    <div id="signupModal">
+    <!-- 모달 1: 회원가입 -->
+    <div class="modal-overlay" id="signupModal">
         <div class="modal-content">
-            <span class="close-modal" onclick="closeSignupModal()">×</span>
-            <div style="font-size: 1.25rem; color: #01579B; font-weight: bold;">비눗방울 회원가입 🫧</div>
-            
-            <label style="font-size: 0.9rem; text-align: left; margin-bottom: -8px;">닉네임 (자유롭게 입력)</label>
-            <input type="text" id="inputNickname" class="modal-input" placeholder="예: 광채나는버블">
-            
-            <label style="font-size: 0.9rem; text-align: left; margin-bottom: -8px;">아이디 (영어 필수)</label>
-            <input type="text" id="inputUserId" class="modal-input" placeholder="예: guang_bubble">
-            <div class="input-hint">* 아이디는 영문으로 작성해주세요.</div>
-
-            <button class="modal-save-btn" onclick="saveUserInfo()">저장</button>
+            <span class="close-modal" onclick="closeModal('signupModal')">×</span>
+            <div style="font-size:1.2rem; color:#01579B;" id="signupModalTitle">비눗방울 회원가입 🫧</div>
+            <label style="font-size:0.85rem;">닉네임</label>
+            <input type="text" id="inputNickname" class="modal-input" placeholder="닉네임 입력">
+            <label style="font-size:0.85rem;">아이디 (영어 필수)</label>
+            <input type="text" id="inputUserId" class="modal-input" placeholder="영문 아이디 (예: gpepsl)">
+            <button class="modal-save-btn" onclick="saveUserInfo()">저장하기</button>
         </div>
     </div>
 
-    <!-- 강제 회원가입 안내 팝업 -->
-    <div id="alertModal">
-        <div class="alert-box">
-            <span class="close-modal" onclick="closeAlertModal()">×</span>
-            <div class="alert-text">회원가입을 먼저 해주세요</div>
-            <div>
-                <span class="alert-link" onclick="goToSignupFromAlert()">회원가입</span>
+    <!-- 모달 2: 방울권 목록 -->
+    <div class="modal-overlay" id="ticketListModal">
+        <div class="modal-content">
+            <span class="close-modal" onclick="closeModal('ticketListModal')">×</span>
+            <div style="font-size:1.2rem; color:#01579B;">내가 끊은 방울권 🎟️</div>
+            <div id="myTicketList" style="display:flex; flex-direction:column; gap:10px; max-height:250px; overflow-y:auto;"></div>
+        </div>
+    </div>
+
+    <!-- 모달 3: 로그아웃 확인 -->
+    <div class="modal-overlay" id="logoutModal">
+        <div class="modal-content" style="text-align:center;">
+            <div style="font-size:1.15rem; color:#333; margin-top:10px;">로그아웃을 하실건가요?</div>
+            <div style="display:flex; gap:10px; margin-top:10px;">
+                <button class="modal-save-btn" style="flex:1; background:#ccc;" onclick="closeModal('logoutModal')">취소</button>
+                <button class="modal-save-btn" style="flex:1; background:#FF4081;" onclick="processLogout()">로그아웃</button>
             </div>
         </div>
     </div>
 
-    <!-- 하단 네비게이션 바 (앱 모드에서만 표시) -->
+    <!-- 모달 4: 관리자 전용 회원가입 유저 목록 (gpepsl) -->
+    <div class="modal-overlay" id="userListModal">
+        <div class="modal-content">
+            <span class="close-modal" onclick="closeModal('userListModal')">×</span>
+            <div style="font-size:1.2rem; color:#01579B;">가입한 유저 목록 👥</div>
+            <div id="registeredUserList" style="display:flex; flex-direction:column; gap:8px; max-height:260px; overflow-y:auto;"></div>
+        </div>
+    </div>
+
+    <!-- 모달 5: 알림 및 물방울 신청/승인 목록 -->
+    <div class="modal-overlay" id="notiModal">
+        <div class="modal-content">
+            <span class="close-modal" onclick="closeModal('notiModal')">×</span>
+            <div style="font-size:1.2rem; color:#01579B;">알림 🔔</div>
+            <div id="notiList" style="display:flex; flex-direction:column; gap:10px; max-height:280px; overflow-y:auto;"></div>
+        </div>
+    </div>
+
+    <!-- 모달 6: 승낙 후 아티스트 이름 설정 -->
+    <div class="modal-overlay" id="setArtistNameModal">
+        <div class="modal-content">
+            <div style="font-size:1.15rem; color:#01579B;">🎉 축하합니다! 물방울 승낙완료</div>
+            <div style="font-size:0.9rem; color:#666;">첫 번째 화면에 표시될 물방울 이름을 입력해주세요.</div>
+            <input type="text" id="inputNewArtistName" class="modal-input" placeholder="예: 봄날의햇살">
+            <button class="modal-save-btn" onclick="confirmArtistName()">이름 결정하기</button>
+        </div>
+    </div>
+
+    <!-- 하단 네비게이션 바 -->
     <div class="nav-bar" id="bottomNavBar" style="display: none;">
-        <button class="nav-btn active" onclick="switchTab(1)" title="물방울">
-            <svg viewBox="0 0 24 24"><path d="M12 2.69l5.66 5.66a8 8 0 1 1-11.31 0z"></path></svg>
-        </button>
-        <button class="nav-btn" onclick="switchTab(2)" title="채팅">
-            <svg viewBox="0 0 24 24"><path d="M21 15a2 2 0 0 1-2 2H7l-4 4V5a2 2 0 0 1 2-2h14a2 2 0 0 1 2 2z"></path></svg>
-        </button>
-        <button class="nav-btn" onclick="switchTab(3)" title="마이페이지">
-            <svg viewBox="0 0 24 24"><path d="M20 21v-2a4 4 0 0 0-4-4H8a4 4 0 0 0-4 4v2"></path><circle cx="12" cy="7" r="4"></circle></svg>
-        </button>
+        <button class="nav-btn active" onclick="switchTab(1)"><svg viewBox="0 0 24 24"><path d="M12 2.69l5.66 5.66a8 8 0 1 1-11.31 0z"></path></svg></button>
+        <button class="nav-btn" onclick="switchTab(2)"><svg viewBox="0 0 24 24"><path d="M21 15a2 2 0 0 1-2 2H7l-4 4V5a2 2 0 0 1 2-2h14a2 2 0 0 1 2 2z"></path></svg></button>
+        <button class="nav-btn" onclick="switchTab(3)"><svg viewBox="0 0 24 24"><path d="M20 21v-2a4 4 0 0 0-4-4H8a4 4 0 0 0-4 4v2"></path><circle cx="12" cy="7" r="4"></circle></svg></button>
     </div>
 
     <script>
+        // 초기 데이터 세팅
         let isSignedUp = false;
-        let isSubscribed = false;
-        let userData = { nickname: '', userId: '' };
+        let currentUser = { nickname: '', userId: '' };
+        
+        // 아티스트 기본 데이터 (혜린 포함)
+        let artists = [
+            { id: 'hyerin', name: '혜린', avatar: '👩🏻', desc: '광버블 아티스트' },
+            { id: 'gaeun', name: '가은', avatar: '👤', desc: '광버블 아티스트' },
+            { id: 'nayeon', name: '나연', avatar: '👤', desc: '광버블 아티스트' },
+            { id: 'dahyun', name: '다현', avatar: '👤', desc: '광버블 아티스트' },
+            { id: 'rahee', name: '라희', avatar: '👤', desc: '광버블 아티스트' }
+        ];
+
+        let subscribedTickets = []; // 내가 끊은 방울권 목록 (아티스트 ID들)
+        let chatHistories = {}; // 아티스트별 채팅 내역
+        
+        // 시스템 전체 데이터
+        let registeredUsers = []; // 회원가입한 전체 유저
+        let bubbleRequests = []; // 물방울 신청 내역 [{userId, nickname, status: 'pending'|'approved'}]
+        let userNotifications = {}; // 유저별 알림 [ {type, msg, extra} ]
+        let currentChatArtistId = null;
 
         window.addEventListener('DOMContentLoaded', () => {
             setTimeout(() => {
@@ -644,22 +577,19 @@
                 splash.style.opacity = '0';
                 setTimeout(() => {
                     splash.style.display = 'none';
-
-                    // PWA 홈 화면 앱(Standalone) 모드 여부 확인
                     const isStandalone = window.matchMedia('(display-mode: standalone)').matches || window.navigator.standalone;
-
                     if (isStandalone) {
-                        // 홈 화면 앱으로 실행된 경우: 본 화면 및 하단 네비게이션 노출
                         document.getElementById('appMainContainer').style.display = 'flex';
                         document.getElementById('bottomNavBar').style.display = 'flex';
+                        renderArtistList();
                     } else {
-                        // 사파리 브라우저로 그냥 들어온 경우: 설치 가이드 안내 화면 노출
                         document.getElementById('safariGuideContainer').style.display = 'flex';
                     }
                 }, 600);
-            }, 2000); // 2초 인트로 타이핑 대기
+            }, 2000);
         });
 
+        // 탭 전환
         function switchTab(tabIndex) {
             const buttons = document.querySelectorAll('.nav-btn');
             buttons.forEach((btn, idx) => {
@@ -672,112 +602,444 @@
             }
             document.getElementById(`tab${tabIndex}`).classList.add('active');
 
-            if (tabIndex === 2) {
-                renderChatList();
-            }
+            if (tabIndex === 2) renderChatList();
         }
 
-        function openHyerinDetail() {
-            if (!isSignedUp) {
-                document.getElementById('alertModal').style.display = 'flex';
+        // 알림 숫 업데이트
+        function updateNotiBadge() {
+            const badge = document.getElementById('notiBadge');
+            let count = 0;
+            if (!currentUser.userId) {
+                badge.style.display = 'none';
                 return;
             }
-            document.getElementById('artistListView').style.display = 'none';
-            document.getElementById('hyerinDetailView').style.display = 'flex';
+            const myNotis = userNotifications[currentUser.userId] || [];
+            count = myNotis.length;
+
+            if (currentUser.userId === 'gpepsl') {
+                const pendingReqs = bubbleRequests.filter(r => r.status === 'pending');
+                count += pendingReqs.length;
+            }
+
+            if (count > 0) {
+                badge.innerText = count;
+                badge.style.display = 'block';
+            } else {
+                badge.style.display = 'none';
+            }
         }
 
-        function closeHyerinDetail() {
-            document.getElementById('hyerinDetailView').style.display = 'none';
-            document.getElementById('hyerinChatRoom').style.display = 'none';
+        // 아티스트 목록 렌더링
+        function renderArtistList() {
+            const container = document.getElementById('artistListContainer');
+            container.innerHTML = '';
+            artists.forEach(artist => {
+                const item = document.createElement('div');
+                item.className = 'artist-item';
+                item.onclick = () => openArtistDetail(artist);
+                item.innerHTML = `
+                    <div class="profile-img">${artist.avatar}</div>
+                    <div class="artist-info">
+                        <span class="artist-name">${artist.name}</span>
+                        <span class="artist-status">${artist.desc}</span>
+                    </div>
+                `;
+                container.appendChild(item);
+            });
+        }
+
+        // 아티스트 상세 뷰 열기
+        function openArtistDetail(artist) {
+            if (!isSignedUp) {
+                showToast("회원가입을 먼저 해주세요!");
+                switchTab(3);
+                openSignupModal();
+                return;
+            }
+
+            document.getElementById('artistListView').style.display = 'none';
+            const detailView = document.getElementById('artistDetailView');
+            detailView.style.display = 'flex';
+
+            document.getElementById('detailAvatar').innerText = artist.avatar;
+            document.getElementById('detailName').innerText = artist.name;
+
+            const actionArea = document.getElementById('subscribeActionArea');
+            const isSubbed = subscribedTickets.includes(artist.id);
+
+            if (isSubbed) {
+                actionArea.innerHTML = `
+                    <div class="subscribed-tag"> 이미 끊은 방울권입니다! ✨</div>
+                    <button class="subscribe-btn" style="margin-top:10px;" onclick="goToChatFromDetail('${artist.id}')">채팅으로 이동</button>
+                `;
+            } else {
+                actionArea.innerHTML = `
+                    <button class="subscribe-btn" onclick="buyTicket('${artist.id}')">방울권 끊기</button>
+                `;
+            }
+        }
+
+        function closeArtistDetail() {
+            document.getElementById('artistDetailView').style.display = 'none';
             document.getElementById('artistListView').style.display = 'block';
         }
 
-        function buyBangwoolTicket() {
-            isSubscribed = true;
+        // 방울권 구매
+        function buyTicket(artistId) {
+            if (!subscribedTickets.includes(artistId)) {
+                subscribedTickets.push(artistId);
+            }
             showToast("방울권 끊기 성공!");
-            setTimeout(() => {
-                document.getElementById('hyerinDetailView').style.display = 'none';
-                document.getElementById('hyerinChatRoom').style.display = 'flex';
-            }, 1000);
+            const artist = artists.find(a => a.id === artistId);
+            openArtistDetail(artist);
         }
 
-        function exitChatRoom() {
-            closeHyerinDetail();
+        // 내가 끊은 방울권 취소
+        function cancelTicket(artistId) {
+            subscribedTickets = subscribedTickets.filter(id => id !== artistId);
+            showToast("방울권이 취소되었습니다.");
+            openMyTicketsModal();
+            renderChatList();
         }
 
-        function showToast(message) {
-            const toast = document.getElementById('toastPopup');
-            toast.innerText = message;
-            toast.classList.add('show');
-            setTimeout(() => {
-                toast.classList.remove('show');
-            }, 3000);
+        function goToChatFromDetail(artistId) {
+            closeArtistDetail();
+            switchTab(2);
+            openChatRoom(artistId);
         }
 
-        function openSignupModal() {
-            document.getElementById('signupModal').style.display = 'flex';
-        }
-        function closeSignupModal() {
-            document.getElementById('signupModal').style.display = 'none';
-        }
-        function closeAlertModal() {
-            document.getElementById('alertModal').style.display = 'none';
-        }
-        function goToSignupFromAlert() {
-            closeAlertModal();
-            switchTab(3);
-            openSignupModal();
+        // 채팅 목록 렌더링
+        function renderChatList() {
+            const container = document.getElementById('chatListContainer');
+            if (subscribedTickets.length === 0) {
+                container.innerHTML = `
+                    <div style="text-align: center; padding: 40px 20px; color: #78909C;">
+                        구독 중인 물방울이 없습니다.<br>먼저 방울권을 끊어주세요! 💧
+                    </div>
+                `;
+                return;
+            }
+
+            container.innerHTML = '';
+            subscribedTickets.forEach(id => {
+                const artist = artists.find(a => a.id === id);
+                if (artist) {
+                    const history = chatHistories[id] || [];
+                    const lastMsg = history.length > 0 ? history[history.length - 1].text : '채팅을 시작해보세요!';
+                    const item = document.createElement('div');
+                    item.className = 'artist-item';
+                    item.onclick = () => openChatRoom(id);
+                    item.innerHTML = `
+                        <div class="profile-img">${artist.avatar}</div>
+                        <div class="artist-info">
+                            <span class="artist-name">${artist.name}</span>
+                            <span class="artist-status" style="color:#444;">${lastMsg}</span>
+                        </div>
+                    `;
+                    container.appendChild(item);
+                }
+            });
         }
 
+        // 채팅방 열기
+        function openChatRoom(artistId) {
+            currentChatArtistId = artistId;
+            const artist = artists.find(a => a.id === artistId);
+            document.getElementById('chatListView').style.display = 'none';
+            document.getElementById('chatRoomView').style.display = 'flex';
+            document.getElementById('chatRoomTitle').innerText = `💬 ${artist.name}와의 버블 채팅`;
+
+            if (!chatHistories[artistId]) {
+                chatHistories[artistId] = [
+                    { sender: artist.name, text: `안녕! 광버블에 온 걸 환영해 💧✨`, type: 'other' }
+                ];
+            }
+            renderMessages();
+        }
+
+        function closeChatRoom() {
+            document.getElementById('chatRoomView').style.display = 'none';
+            document.getElementById('chatListView').style.display = 'block';
+            renderChatList();
+        }
+
+        // 메시지 렌더링
+        function renderMessages() {
+            const container = document.getElementById('chatMessages');
+            container.innerHTML = '';
+            const history = chatHistories[currentChatArtistId] || [];
+
+            history.forEach(msg => {
+                const bubble = document.createElement('div');
+                bubble.className = `msg-bubble ${msg.colorStyle || 'white'}`;
+                bubble.innerText = msg.text;
+                container.appendChild(bubble);
+            });
+            container.scrollTop = container.scrollHeight;
+        }
+
+        // 메시지 전송 (시점 핵심 로직)
+        function sendChatMessage() {
+            const input = document.getElementById('chatInput');
+            const text = input.value.trim();
+            if (!text) return;
+
+            let colorStyle = 'white'; // 기본 팬 시점: 하얀색
+
+            // 내가 혜린(제작자)이거나 현재 계정이 gpepsl일 경우 하늘색 말풍선
+            if (currentUser.userId === 'gpepsl' || currentChatArtistId === 'hyerin') {
+                colorStyle = 'blue';
+            }
+
+            chatHistories[currentChatArtistId].push({
+                sender: currentUser.nickname,
+                text: text,
+                colorStyle: colorStyle
+            });
+
+            input.value = '';
+            renderMessages();
+        }
+
+        // 회원가입 저장
         function saveUserInfo() {
             const nick = document.getElementById('inputNickname').value.trim();
             const uid = document.getElementById('inputUserId').value.trim();
 
             if (!nick || !uid) {
-                alert('닉네임과 아이디를 모두 입력해주세요!');
+                showToast("닉네임과 아이디를 모두 입력해주세요!");
                 return;
             }
 
-            userData.nickname = nick;
-            userData.userId = uid;
+            const isEdit = isSignedUp;
+            currentUser = { nickname: nick, userId: uid };
             isSignedUp = true;
 
-            closeSignupModal();
-            showToast("회원가입 완료!");
+            if (!registeredUsers.some(u => u.userId === uid)) {
+                registeredUsers.push(currentUser);
+            }
 
-            document.getElementById('displayNickname').innerText = userData.nickname;
-            document.getElementById('displayId').innerText = '@' + userData.userId;
+            closeModal('signupModal');
+            showToast(isEdit ? "정보 변경 완료!" : "회원가입 완료!");
+
+            // 마이페이지 갱신
+            document.getElementById('displayNickname').innerText = currentUser.nickname;
+            document.getElementById('displayId').innerText = '@' + currentUser.userId;
             document.getElementById('signupTriggerBtn').style.display = 'none';
+            
+            renderMypageMenu();
+            updateNotiBadge();
         }
 
-        function renderChatList() {
-            const container = document.getElementById('chatListContainer');
-            if (!isSubscribed) {
-                container.innerHTML = `
-                    <div style="text-align: center; padding: 40px 20px; color: #78909C;">
-                        구독 중인 아티스트가 없습니다.<br>방울권을 먼저 끊어주세요! 💧
-                    </div>
-                `;
+        // 마이페이지 버튼 렌더링 (일반 4개, gpepsl 5개)
+        function renderMypageMenu() {
+            const menuList = document.getElementById('mypageMenuList');
+            menuList.style.display = 'flex';
+            menuList.innerHTML = '';
+
+            const isGpepsl = (currentUser.userId === 'gpepsl');
+
+            const buttons = [
+                { title: '✏️ 닉네임 & 아이디 변경', action: () => openEditProfileModal() },
+                { title: '🎟️ 방울권 목록', action: () => openMyTicketsModal() },
+                { title: '💧 물방울 신청하기', action: () => requestBubble() },
+                { title: '🚪 로그아웃', action: () => openModal('logoutModal') }
+            ];
+
+            if (isGpepsl) {
+                buttons.splice(3, 0, { title: '👥 회원가입 유저 목록 (관리자)', action: () => openUserListModal() });
+            }
+
+            buttons.forEach(btn => {
+                const b = document.createElement('button');
+                b.className = 'menu-btn';
+                b.onclick = btn.action;
+                b.innerHTML = `<span>${btn.title}</span> <span>›</span>`;
+                menuList.appendChild(b);
+            });
+        }
+
+        function openEditProfileModal() {
+            document.getElementById('signupModalTitle').innerText = "프로필 수정 ✏️";
+            document.getElementById('inputNickname').value = currentUser.nickname;
+            document.getElementById('inputUserId').value = currentUser.userId;
+            openModal('signupModal');
+        }
+
+        function openMyTicketsModal() {
+            const container = document.getElementById('myTicketList');
+            container.innerHTML = '';
+
+            if (subscribedTickets.length === 0) {
+                container.innerHTML = '<div style="text-align:center; color:#888; padding:20px;">구독 중인 방울권이 없습니다.</div>';
             } else {
-                container.innerHTML = `
-                    <div class="artist-list">
-                        <div class="artist-item clickable" onclick="openSubscribedChat()">
-                            <div class="profile-img">👩🏻</div>
-                            <div class="artist-info">
-                                <span class="artist-name" style="font-weight: bold;">혜린</span>
-                                <span class="artist-status" style="font-size: 0.9rem; color: #444;">안녕! 광버블에 온 걸 환영해 물방울들 💧✨...</span>
-                            </div>
+                subscribedTickets.forEach(id => {
+                    const artist = artists.find(a => a.id === id);
+                    const item = document.createElement('div');
+                    item.style.cssText = 'display:flex; justify-content:space-between; align-items:center; padding:10px; border-bottom:1px solid #eee;';
+                    item.innerHTML = `
+                        <div style="display:flex; align-items:center; gap:8px;">
+                            <span>${artist.avatar}</span> <strong>${artist.name}</strong>
                         </div>
-                    </div>
-                `;
+                        <button onclick="cancelTicket('${artist.id}')" style="background:#FF4081; color:white; border:none; padding:6px 12px; border-radius:10px; cursor:pointer;">방울권 끊기</button>
+                    `;
+                    container.appendChild(item);
+                });
+            }
+            openModal('ticketListModal');
+        }
+
+        // 물방울 신청하기
+        function requestBubble() {
+            if (bubbleRequests.some(r => r.userId === currentUser.userId)) {
+                showToast("이미 물방울 신청을 하셨습니다!");
+                return;
+            }
+
+            bubbleRequests.push({
+                userId: currentUser.userId,
+                nickname: currentUser.nickname,
+                status: 'pending'
+            });
+
+            showToast("관리자(gpepsl)에게 물방울 신청이 전달되었습니다!");
+            updateNotiBadge();
+        }
+
+        // 알림 모달 열기
+        function openNotificationModal() {
+            const container = document.getElementById('notiList');
+            container.innerHTML = '';
+
+            const isGpepsl = (currentUser.userId === 'gpepsl');
+
+            if (isGpepsl) {
+                const pending = bubbleRequests.filter(r => r.status === 'pending');
+                if (pending.length === 0) {
+                    container.innerHTML = '<div style="text-align:center; color:#888; padding:20px;">새로운 신청 알림이 없습니다.</div>';
+                } else {
+                    pending.forEach(req => {
+                        const item = document.createElement('div');
+                        item.style.cssText = 'background:#F1F8FE; padding:12px; border-radius:12px; display:flex; justify-content:space-between; align-items:center;';
+                        item.innerHTML = `
+                            <div>
+                                <strong>${req.nickname}</strong> (@${req.userId})<br>
+                                <span style="font-size:0.85rem; color:#666;">물방울 신청 도착</span>
+                            </div>
+                            <button onclick="approveBubble('${req.userId}')" style="background:#0288D1; color:white; border:none; padding:8px 14px; border-radius:10px; cursor:pointer;">승낙</button>
+                        `;
+                        container.appendChild(item);
+                    });
+                }
+            } else {
+                const myNotis = userNotifications[currentUser.userId] || [];
+                if (myNotis.length === 0) {
+                    container.innerHTML = '<div style="text-align:center; color:#888; padding:20px;">받은 알림이 없습니다.</div>';
+                } else {
+                    myNotis.forEach((noti, index) => {
+                        const item = document.createElement('div');
+                        item.style.cssText = 'background:#F1F8FE; padding:12px; border-radius:12px; display:flex; flex-direction:column; gap:8px;';
+                        item.innerHTML = `
+                            <div>${noti.msg}</div>
+                            ${noti.type === 'approved' ? `<button onclick="openSetArtistNameModal('${index}')" style="background:#0288D1; color:white; border:none; padding:8px; border-radius:10px; cursor:pointer;">활동 이름 정하기</button>` : ''}
+                        `;
+                        container.appendChild(item);
+                    });
+                }
+            }
+
+            openModal('notiModal');
+        }
+
+        // 승낙 처리 (관리자)
+        function approveBubble(applicantUserId) {
+            const req = bubbleRequests.find(r => r.userId === applicantUserId);
+            if (req) {
+                req.status = 'approved';
+                if (!userNotifications[applicantUserId]) userNotifications[applicantUserId] = [];
+                userNotifications[applicantUserId].push({
+                    type: 'approved',
+                    msg: '🎉 물방울 신청이 승낙되었습니다! 사용할 이름을 정해보세요.'
+                });
+                showToast("물방울 신청을 승낙했습니다!");
+                openNotificationModal();
+                updateNotiBadge();
             }
         }
 
-        function openSubscribedChat() {
+        // 유저 이름 정하기
+        let currentNotiIndex = null;
+        function openSetArtistNameModal(index) {
+            currentNotiIndex = index;
+            closeModal('notiModal');
+            openModal('setArtistNameModal');
+        }
+
+        function confirmArtistName() {
+            const name = document.getElementById('inputNewArtistName').value.trim();
+            if (!name) {
+                showToast("이름을 입력해주세요!");
+                return;
+            }
+
+            const newId = 'artist_' + Date.now();
+            artists.push({
+                id: newId,
+                name: name,
+                avatar: '💧',
+                desc: '광버블 아티스트'
+            });
+
+            if (userNotifications[currentUser.userId]) {
+                userNotifications[currentUser.userId].splice(currentNotiIndex, 1);
+            }
+
+            closeModal('setArtistNameModal');
+            showToast("새로운 물방울 아티스트로 등록되었습니다!");
+            renderArtistList();
+            updateNotiBadge();
             switchTab(1);
-            document.getElementById('artistListView').style.display = 'none';
-            document.getElementById('hyerinDetailView').style.display = 'none';
-            document.getElementById('hyerinChatRoom').style.display = 'flex';
+        }
+
+        function openUserListModal() {
+            const container = document.getElementById('registeredUserList');
+            container.innerHTML = '';
+            registeredUsers.forEach(u => {
+                const item = document.createElement('div');
+                item.style.cssText = 'padding:10px; border-bottom:1px solid #eee; display:flex; justify-content:space-between;';
+                item.innerHTML = `<span><strong>${u.nickname}</strong></span> <span style="color:#78909C;">@${u.userId}</span>`;
+                container.appendChild(item);
+            });
+            openModal('userListModal');
+        }
+
+        // 로그아웃
+        function processLogout() {
+            isSignedUp = false;
+            currentUser = { nickname: '', userId: '' };
+            subscribedTickets = [];
+            closeModal('logoutModal');
+            showToast("로그아웃 되었습니다.");
+
+            document.getElementById('displayNickname').innerText = '비눗방울';
+            document.getElementById('displayId').innerText = '@guest_bubble';
+            document.getElementById('signupTriggerBtn').style.display = 'inline-block';
+            document.getElementById('mypageMenuList').style.display = 'none';
+
+            renderArtistList();
+            renderChatList();
+            updateNotiBadge();
+        }
+
+        function openSignupModal() { openModal('signupModal'); }
+        function openModal(id) { document.getElementById(id).style.display = 'flex'; }
+        function closeModal(id) { document.getElementById(id).style.display = 'none'; }
+
+        function showToast(msg) {
+            const toast = document.getElementById('toastPopup');
+            toast.innerText = msg;
+            toast.classList.add('show');
+            setTimeout(() => toast.classList.remove('show'), 3000);
         }
     </script>
 </body>
