@@ -4,6 +4,7 @@
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
     <title>광버블</title>
+    <link rel="manifest" href="manifest.json">
     <link rel="preconnect" href="https://fonts.googleapis.com">
     <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
     <link href="https://fonts.googleapis.com/css2?family=Cinzel:wght@700;800&family=Jua&display=swap" rel="stylesheet">
@@ -11,7 +12,7 @@
     <style>
         :root {
             --sky-bg: linear-gradient(180deg, #E0F7FA 0%, #B3E5FC 50%, #E1F5FE 100%);
-            --glass-bg: rgba(255, 255, 255, 0.9);
+            --glass-bg: rgba(255, 255, 255, 0.88);
             --glass-border: rgba(255, 255, 255, 0.95);
             --primary-blue: #0288D1;
             --accent-pink: #FF4081;
@@ -28,14 +29,14 @@
             background: var(--sky-bg);
             min-height: 100vh;
             display: flex;
-            flex-direction: column;
-            align-items: center;
+            justify-content: center;
+            align-items: flex-start;
             padding: 12px;
-            padding-top: 75px; /* 상단 네비게이션바 여백 */
             color: #333;
             overflow-x: hidden;
         }
 
+        /* 인트로 스플래시 화면 */
         #splashScreen {
             position: fixed;
             top: 0; left: 0;
@@ -77,8 +78,8 @@
             display: none;
             flex-direction: column;
             gap: 12px;
-            padding-bottom: 40px;
-            min-height: 82vh;
+            padding-bottom: 90px;
+            min-height: 90vh;
             transition: max-width 0.3s ease;
         }
 
@@ -86,100 +87,59 @@
             .container {
                 max-width: 860px;
                 padding: 20px;
-                padding-top: 10px;
             }
             .card-box {
-                min-height: 75vh;
+                min-height: 80vh;
                 padding: 30px !important;
+            }
+            .splash-title {
+                font-size: 3.5rem;
+            }
+            @keyframes typing {
+                from { width: 0; }
+                to { width: 440px; }
             }
         }
 
-        /* [수정] 네비게이션바 상단 고정 */
-        .nav-bar {
-            position: fixed;
-            top: 0;
-            left: 50%;
-            transform: translateX(-50%);
-            width: 100%;
-            max-width: 440px;
-            background: rgba(255, 255, 255, 0.92);
-            backdrop-filter: blur(12px);
-            border-bottom: 2px solid rgba(2, 136, 209, 0.2);
+        .top-app-bar {
             display: flex;
-            justify-content: space-around;
-            padding: 8px 12px;
-            z-index: 1000;
-            box-shadow: 0 4px 15px rgba(2, 136, 209, 0.08);
-            transition: max-width 0.3s ease;
-        }
-
-        @media (min-width: 768px) {
-            .nav-bar { max-width: 860px; border-radius: 0 0 20px 20px; }
-        }
-
-        .nav-bar-inner {
-            display: flex;
-            width: 100%;
             justify-content: space-between;
             align-items: center;
+            padding: 8px 12px;
         }
 
-        .app-title-small {
+        .app-title {
             font-family: 'Cinzel', serif;
-            font-size: 1.3rem;
+            font-size: 1.6rem;
             font-weight: 800;
             color: #01579B;
         }
-
-        .nav-btn-group {
-            display: flex;
-            gap: 12px;
-        }
-
-        .nav-btn {
-            background: transparent;
-            border: 2px solid #B3E5FC;
-            width: 42px;
-            height: 42px;
-            border-radius: 12px;
-            display: flex;
-            justify-content: center;
-            align-items: center;
-            cursor: pointer;
-            transition: transform 0.15s, background 0.15s;
-        }
-
-        .nav-btn:active, .nav-btn.active {
-            transform: scale(0.92);
-            background: rgba(2, 136, 209, 0.15);
-            border-color: #0288D1;
-        }
-        .nav-btn svg {
-            width: 22px; height: 22px; fill: none; stroke: #0288D1; stroke-width: 2; stroke-linecap: round; stroke-linejoin: round;
-        }
-        .nav-btn.active svg { stroke: #01579B; }
 
         .noti-btn {
             position: relative;
             background: white;
             border: 1px solid #B3E5FC;
             border-radius: 50%;
-            width: 42px;
-            height: 42px;
+            width: 44px;
+            height: 44px;
             display: flex;
             justify-content: center;
             align-items: center;
             cursor: pointer;
-            box-shadow: 0 2px 8px rgba(0,0,0,0.05);
-            font-size: 1.1rem;
+            box-shadow: 0 4px 10px rgba(0,0,0,0.05);
+            font-size: 1.2rem;
         }
 
         .noti-badge {
             position: absolute;
-            top: -2px; right: -2px;
+            top: -2px;
+            right: -2px;
             background: var(--accent-pink);
-            color: white; font-size: 0.7rem; font-weight: bold;
-            border-radius: 10px; padding: 2px 6px;
+            color: white;
+            font-size: 0.75rem;
+            font-weight: bold;
+            border-radius: 10px;
+            padding: 2px 6px;
             display: none;
         }
 
@@ -203,120 +163,249 @@
             box-shadow: 0 10px 25px rgba(2, 136, 209, 0.1);
         }
 
-        .guide-section { display: flex; flex-direction: column; gap: 12px; }
-        .step-card { background: var(--glass-bg); border-radius: 20px; padding: 16px; display: flex; align-items: center; gap: 14px; }
-        .step-num { width: 32px; height: 32px; border-radius: 10px; background: #0288D1; color: white; display: flex; justify-content: center; align-items: center; font-weight: bold; }
-
-        .top-header {
-            font-size: 1.35rem; color: #01579B; margin-bottom: 16px; display: flex; align-items: center; justify-content: space-between;
+        .guide-section {
+            display: flex;
+            flex-direction: column;
+            gap: 12px;
+        }
+        .step-card {
+            background: var(--glass-bg);
+            border-radius: 20px;
+            padding: 16px;
+            display: flex;
+            align-items: center;
+            gap: 14px;
+        }
+        .step-num {
+            width: 32px; height: 32px; border-radius: 10px; background: #0288D1; color: white;
+            display: flex; justify-content: center; align-items: center; font-weight: bold;
         }
 
-        .artist-list { display: flex; flex-direction: column; gap: 8px; overflow-y: auto; flex: 1; }
+        .top-header {
+            font-size: 1.35rem;
+            color: #01579B;
+            margin-bottom: 16px;
+            display: flex;
+            align-items: center;
+            justify-content: space-between;
+        }
+
+        .artist-list {
+            display: flex;
+            flex-direction: column;
+            gap: 8px;
+            overflow-y: auto;
+            flex: 1;
+        }
+
         @media (min-width: 768px) {
-            .artist-list { display: grid; grid-template-columns: repeat(2, 1fr); gap: 12px; }
+            .artist-list {
+                display: grid;
+                grid-template-columns: repeat(2, 1fr);
+                gap: 12px;
+            }
         }
 
         .artist-item {
-            display: flex; align-items: center; gap: 14px; padding: 14px 12px;
-            border-radius: 16px; cursor: pointer; background: rgba(255,255,255,0.7);
-            transition: transform 0.15s ease, background 0.15s;
-            border: 1px solid rgba(179, 229, 252, 0.5);
+            display: flex;
+            align-items: center;
+            gap: 14px;
+            padding: 14px 12px;
+            border-bottom: 1px solid rgba(2, 136, 209, 0.08);
+            border-radius: 16px;
+            cursor: pointer;
+            background: rgba(255,255,255,0.6);
+            transition: transform 0.15s ease;
         }
-        .artist-item:hover { transform: translateY(-2px); background: rgba(255,255,255,0.95); }
+        .artist-item:hover {
+            transform: translateY(-2px);
+            background: rgba(255,255,255,0.9);
+        }
 
         .profile-img {
-            width: 52px; height: 52px; border-radius: 50%; background: #B3E5FC;
-            display: flex; justify-content: center; align-items: center; font-size: 1.5rem;
-            border: 2px solid #0288D1; flex-shrink: 0;
+            width: 52px; height: 52px;
+            border-radius: 50%;
+            background: #B3E5FC;
+            display: flex; justify-content: center; align-items: center;
+            font-size: 1.5rem;
+            border: 2px solid #0288D1;
+            flex-shrink: 0;
         }
 
         .artist-info { display: flex; flex-direction: column; }
         .artist-name { font-size: 1.15rem; color: #333; }
-        .artist-status { font-size: 0.85rem; color: #666; }
+        .artist-status { font-size: 0.88rem; color: #666; }
 
-        .sub-view { display: none; flex-direction: column; align-items: center; text-align: center; gap: 16px; padding: 20px 10px; flex: 1; }
-        .sub-profile-img { width: 100px; height: 100px; border-radius: 50%; background: #81D4FA; display: flex; justify-content: center; align-items: center; font-size: 3rem; border: 3px solid #0288D1; }
+        .sub-view {
+            display: none;
+            flex-direction: column;
+            align-items: center;
+            text-align: center;
+            gap: 16px;
+            padding: 20px 10px;
+            flex: 1;
+        }
+
+        .sub-profile-img {
+            width: 100px; height: 100px;
+            border-radius: 50%; background: #81D4FA;
+            display: flex; justify-content: center; align-items: center;
+            font-size: 3rem; border: 3px solid #0288D1;
+        }
 
         .subscribe-btn {
-            background: linear-gradient(135deg, #03A9F4, #00BCD4); color: white; border: none;
-            padding: 12px 32px; border-radius: 20px; font-size: 1.1rem; cursor: pointer;
-            box-shadow: 0 6px 15px rgba(3, 169, 244, 0.3); transition: transform 0.1s;
+            background: linear-gradient(135deg, #03A9F4, #00BCD4);
+            color: white; border: none; padding: 12px 32px;
+            border-radius: 20px; font-size: 1.1rem; cursor: pointer;
+            box-shadow: 0 6px 15px rgba(3, 169, 244, 0.3);
         }
-        .subscribe-btn:active { transform: scale(0.96); }
 
-        .subscribed-tag { background: #E0F7FA; color: #0288D1; padding: 12px 24px; border-radius: 16px; font-size: 1rem; border: 1px solid #B3E5FC; }
-        .back-link { color: #0288D1; font-size: 0.95rem; cursor: pointer; text-decoration: underline; margin-top: 6px; }
+        .subscribed-tag {
+            background: #E0F7FA;
+            color: #0288D1;
+            padding: 12px 24px;
+            border-radius: 16px;
+            font-size: 1rem;
+            border: 1px solid #B3E5FC;
+        }
 
-        /* 채팅 디자인 & 로직 구조 */
-        .chat-room-container { display: none; flex-direction: column; height: 100%; flex: 1; }
+        .back-link {
+            color: #0288D1; font-size: 0.95rem; cursor: pointer; text-decoration: underline; margin-top: 6px;
+        }
+
+        .chat-room-container {
+            display: none;
+            flex-direction: column;
+            height: 100%;
+            flex: 1;
+        }
+
         .chat-messages {
-            flex: 1; background: rgba(255,255,255,0.6); border-radius: 18px; padding: 16px;
-            overflow-y: auto; display: flex; flex-direction: column; gap: 12px; min-height: 400px; max-height: 560px;
+            flex: 1;
+            background: rgba(255,255,255,0.5);
+            border-radius: 18px;
+            padding: 16px;
+            overflow-y: auto;
+            display: flex;
+            flex-direction: column;
+            gap: 12px;
+            min-height: 420px;
+            max-height: 600px;
         }
 
-        .msg-card {
-            display: flex; flex-direction: column; gap: 4px; max-width: 80%;
-            padding: 12px 16px; border-radius: 18px; font-size: 1rem; line-height: 1.4;
-            word-break: break-word; box-shadow: 0 2px 6px rgba(0,0,0,0.04); position: relative;
-        }
-        .msg-card.fan-sent { background: #FFFFFF; color: #333; align-self: flex-end; border-bottom-right-radius: 4px; border: 1px solid #E1F5FE; }
-        .msg-card.artist-sent { background: #87CEEB; color: #01579B; align-self: flex-start; border-bottom-left-radius: 4px; }
-        .msg-card.shared-reply { background: #FFF9C4; color: #333; align-self: flex-start; border-left: 4px solid #FBC02D; width: 100%; max-width: 100%; }
-
-        .reply-target-box {
-            font-size: 0.85rem; background: rgba(0,0,0,0.05); padding: 6px 10px; border-radius: 8px; margin-bottom: 4px; color: #555;
-            border-left: 3px solid #0288D1;
+        .msg-bubble {
+            max-width: 75%;
+            padding: 10px 16px;
+            border-radius: 18px;
+            font-size: 1rem;
+            line-height: 1.4;
+            word-break: break-word;
+            box-shadow: 0 2px 6px rgba(0,0,0,0.04);
         }
 
-        .artist-reply-btn {
-            background: #0288D1; color: white; border: none; padding: 4px 8px; border-radius: 8px; font-size: 0.75rem; cursor: pointer; align-self: flex-end; margin-top: 4px;
+        .msg-bubble.artist-sky {
+            background: #87CEEB;
+            color: #01579B;
+            align-self: flex-start;
+            border-bottom-left-radius: 4px;
+        }
+        .msg-bubble.artist-sky-right {
+            background: #87CEEB;
+            color: #01579B;
+            align-self: flex-end;
+            border-bottom-right-radius: 4px;
+        }
+        .msg-bubble.white-right {
+            background: #FFFFFF;
+            color: #333;
+            align-self: flex-end;
+            border-bottom-right-radius: 4px;
+        }
+        .msg-bubble.white-left {
+            background: #FFFFFF;
+            color: #333;
+            align-self: flex-start;
+            border-bottom-left-radius: 4px;
         }
 
-        .chat-input-area { display: flex; gap: 8px; margin-top: 12px; }
-        .chat-input { flex: 1; padding: 12px 16px; border-radius: 14px; border: 1px solid #B3E5FC; outline: none; background: white; font-size: 1rem; }
-        .chat-send-btn { background: #0288D1; color: white; border: none; padding: 0 22px; border-radius: 14px; cursor: pointer; font-size: 1rem; }
+        .chat-input-area {
+            display: flex; gap: 8px; margin-top: 12px;
+        }
 
-        /* 마이페이지 스타일 */
-        .mypage-container { display: flex; flex-direction: column; align-items: center; padding: 20px 10px; gap: 16px; text-align: center; }
-        .mypage-avatar { width: 80px; height: 80px; border-radius: 50%; background: #E1F5FE; border: 2px dashed #0288D1; display: flex; justify-content: center; align-items: center; font-size: 2.2rem; }
+        .chat-input {
+            flex: 1; padding: 12px 16px; border-radius: 14px;
+            border: 1px solid #B3E5FC; outline: none; background: white; font-size: 1rem;
+        }
 
-        .menu-btn-list { width: 100%; max-width: 500px; display: flex; flex-direction: column; gap: 10px; margin-top: 10px; }
+        .chat-send-btn {
+            background: #0288D1; color: white; border: none; padding: 0 22px;
+            border-radius: 14px; cursor: pointer; font-size: 1rem;
+        }
+
+        .mypage-container {
+            display: flex; flex-direction: column; align-items: center; padding: 20px 10px; gap: 16px; text-align: center;
+        }
+
+        .mypage-avatar {
+            width: 80px; height: 80px; border-radius: 50%; background: #E1F5FE;
+            border: 2px dashed #0288D1; display: flex; justify-content: center; align-items: center; font-size: 2.2rem;
+        }
+
+        .menu-btn-list {
+            width: 100%; max-width: 500px; display: flex; flex-direction: column; gap: 10px; margin-top: 10px;
+        }
+
         .menu-btn {
             width: 100%; padding: 14px 18px; border-radius: 16px; border: 1px solid #B3E5FC;
             background: white; color: #01579B; font-size: 1.05rem; cursor: pointer;
             box-shadow: 0 4px 12px rgba(2,136,209,0.05); text-align: left; display: flex; justify-content: space-between; align-items: center;
         }
 
-        .auth-btn-group { display: flex; gap: 10px; margin-top: 10px; width: 100%; max-width: 300px; justify-content: center; }
-        .auth-action-btn { flex: 1; background: #0288D1; color: white; border: none; padding: 12px 16px; border-radius: 16px; font-size: 1rem; cursor: pointer; box-shadow: 0 4px 10px rgba(2,136,209,0.2); transition: transform 0.1s; }
-        .auth-action-btn:active { transform: scale(0.96); }
-        .auth-action-btn.login-sub-btn { background: #00838F; }
+        .auth-btn-group {
+            display: flex;
+            gap: 10px;
+            margin-top: 10px;
+            width: 100%;
+            max-width: 300px;
+            justify-content: center;
+        }
 
-        /* [수정] 글래스모피즘 모달 디자인 개선 */
+        .auth-action-btn {
+            flex: 1;
+            background: #0288D1;
+            color: white;
+            border: none;
+            padding: 12px 16px;
+            border-radius: 16px;
+            font-size: 1rem;
+            cursor: pointer;
+        }
+
+        .auth-action-btn.login-sub-btn {
+            background: #00838F;
+        }
+
         .modal-overlay {
             position: fixed; top: 0; left: 0; width: 100%; height: 100%;
-            background: rgba(1, 30, 50, 0.5); display: none; justify-content: center; align-items: center; z-index: 9000; backdrop-filter: blur(6px);
-            animation: fadeIn 0.2s ease;
+            background: rgba(0,0,0,0.4); display: none; justify-content: center; align-items: center; z-index: 9000; backdrop-filter: blur(4px);
         }
-        @keyframes fadeIn { from { opacity: 0; } to { opacity: 1; } }
 
         .modal-content {
-            background: linear-gradient(135deg, #ffffff 0%, #f7fcff 100%); width: 88%; max-width: 400px; padding: 26px; border-radius: 26px;
-            display: flex; flex-direction: column; gap: 14px; position: relative; box-shadow: 0 20px 40px rgba(2, 136, 209, 0.2);
-            border: 1px solid rgba(255,255,255,0.8);
+            background: white; width: 88%; max-width: 400px; padding: 24px; border-radius: 22px;
+            display: flex; flex-direction: column; gap: 14px; position: relative; box-shadow: 0 15px 35px rgba(0,0,0,0.2);
         }
 
-        .close-modal { position: absolute; top: 16px; right: 18px; font-size: 1.4rem; cursor: pointer; color: #0288D1; font-weight: bold; }
-        .modal-input { width: 100%; padding: 14px; border-radius: 14px; border: 1px solid #B3E5FC; background: #FFFFFF; font-size: 1rem; outline: none; transition: border 0.2s; }
-        .modal-input:focus { border-color: #0288D1; box-shadow: 0 0 0 3px rgba(2,136,209,0.1); }
-        .modal-save-btn { background: #0288D1; color: white; border: none; padding: 14px; border-radius: 14px; font-size: 1.05rem; cursor: pointer; box-shadow: 0 4px 12px rgba(2,136,209,0.3); }
-
-        /* 계정 선택 리스트 아이템 */
-        .account-select-item {
-            background: white; border: 1px solid #B3E5FC; padding: 12px 16px; border-radius: 14px;
-            display: flex; justify-content: space-between; align-items: center; cursor: pointer; transition: background 0.15s;
+        .close-modal {
+            position: absolute; top: 14px; right: 16px; font-size: 1.3rem; cursor: pointer; color: #888;
         }
-        .account-select-item:hover { background: #E1F5FE; }
+
+        .modal-input {
+            width: 100%; padding: 12px 14px; border-radius: 12px; border: 1px solid #B3E5FC; background: #F1F8FE; font-size: 1rem; outline: none;
+        }
+
+        .modal-save-btn {
+            background: #0288D1; color: white; border: none; padding: 12px; border-radius: 12px; font-size: 1rem; cursor: pointer;
+        }
 
         #toastPopup {
             position: fixed; top: 20px; left: 50%; transform: translateX(-50%) translateY(-100px);
@@ -324,6 +413,26 @@
             font-size: 1rem; box-shadow: 0 10px 25px rgba(0,0,0,0.2); transition: transform 0.4s cubic-bezier(0.175, 0.885, 0.32, 1.275); z-index: 10000;
         }
         #toastPopup.show { transform: translateX(-50%) translateY(0); }
+
+        .nav-bar {
+            position: fixed; bottom: 0; left: 50%; transform: translateX(-50%);
+            width: 100%; max-width: 440px; background: rgba(255, 255, 255, 0.85); backdrop-filter: blur(12px);
+            border-top: 2px solid #222; display: flex; justify-content: space-around; padding: 10px 0; z-index: 1000;
+            transition: max-width 0.3s ease;
+        }
+
+        @media (min-width: 768px) {
+            .nav-bar { max-width: 860px; border-radius: 20px 20px 0 0; }
+        }
+
+        .nav-btn {
+            background: transparent; border: 2px solid #222; width: 52px; height: 52px; border-radius: 16px;
+            display: flex; justify-content: center; align-items: center; cursor: pointer; transition: transform 0.15s;
+        }
+
+        .nav-btn:active, .nav-btn.active { transform: scale(0.92); background: rgba(2, 136, 209, 0.15); border-color: #0288D1; }
+        .nav-btn svg { width: 26px; height: 26px; fill: none; stroke: #222; stroke-width: 2; stroke-linecap: round; stroke-linejoin: round; }
+        .nav-btn.active svg { stroke: #0288D1; }
 
         .tab-content { display: none; }
         .tab-content.active { display: flex; flex-direction: column; flex: 1; }
@@ -337,34 +446,26 @@
 
     <div id="toastPopup">메시지</div>
 
-    <!-- 상단 네비게이션 바 -->
-    <div class="nav-bar" id="topNavBar" style="display: none;">
-        <div class="nav-bar-inner">
-            <div class="app-title-small">GuangBubble</div>
-            <div class="nav-btn-group">
-                <button class="nav-btn active" onclick="switchTab(1)" title="물방울"><svg viewBox="0 0 24 24"><path d="M12 2.69l5.66 5.66a8 8 0 1 1-11.31 0z"></path></svg></button>
-                <button class="nav-btn" onclick="switchTab(2)" title="채팅"><svg viewBox="0 0 24 24"><path d="M21 15a2 2 0 0 1-2 2H7l-4 4V5a2 2 0 0 1 2-2h14a2 2 0 0 1 2 2z"></path></svg></button>
-                <button class="nav-btn" onclick="switchTab(3)" title="마이페이지"><svg viewBox="0 0 24 24"><path d="M20 21v-2a4 4 0 0 0-4-4H8a4 4 0 0 0-4 4v2"></path><circle cx="12" cy="7" r="4"></circle></svg></button>
-            </div>
-            <div class="noti-btn" onclick="openNotificationModal()">
-                🔔 <span class="noti-badge" id="notiBadge">0</span>
-            </div>
-        </div>
-    </div>
-
-    <!-- 가이드 화면 (PWA/웹 브라우저) -->
+    <!-- [A] 사파리 가이드 화면 -->
     <div class="container" id="safariGuideContainer">
         <div class="hero-card"><div class="splash-title" style="animation:none; width:auto; border:none;">GuangBubble</div></div>
         <div class="guide-section">
             <div style="font-size: 1.05rem; color: #01579B; margin-left: 4px;">📱 앱으로 홈 화면에 추가하기</div>
-            <div class="step-card"><div class="step-num">1</div><div>상단/하단 공유 버튼(⬆) 클릭!</div></div>
+            <div class="step-card"><div class="step-num">1</div><div>하단 공유 버튼(⬆) 클릭!</div></div>
             <div class="step-card"><div class="step-num">2</div><div>메뉴에서 더보기 클릭!</div></div>
             <div class="step-card"><div class="step-num">3</div><div>홈 화면에 추가하기 클릭!</div></div>
         </div>
     </div>
 
-    <!-- 메인 앱 컨테이너 -->
+    <!-- [B] 메인 앱 컨테이너 -->
     <div class="container" id="appMainContainer">
+        
+        <div class="top-app-bar">
+            <div class="app-title">GuangBubble</div>
+            <div class="noti-btn" onclick="openNotificationModal()">
+                🔔 <span class="noti-badge" id="notiBadge">0</span>
+            </div>
+        </div>
 
         <!-- 탭 1: 물방울 -->
         <div id="tab1" class="tab-content active card-box">
@@ -374,21 +475,14 @@
             </div>
 
             <div id="artistDetailView" class="sub-view">
-                <div class="sub-profile-img" id="detailAvatar">💧</div>
+                <div class="sub-profile-img" id="detailAvatar">👤</div>
                 <div class="sub-name" id="detailName" style="font-size:1.4rem; font-weight:bold;">아티스트</div>
-                
-                <!-- 아티스트 계정 시 이름 자유 변경 -->
-                <div id="artistEditNameArea" style="display:none; margin-bottom:8px;">
-                    <input type="text" id="inputModifyArtistName" class="modal-input" placeholder="새 아티스트 이름" style="padding:8px 12px; font-size:0.95rem; width:200px; display:inline-block;">
-                    <button onclick="saveArtistNameChange()" style="background:#0288D1; color:white; border:none; padding:8px 12px; border-radius:10px; cursor:pointer;">이름 수정</button>
-                </div>
-                
                 <div id="subscribeActionArea"></div>
                 <div class="back-link" onclick="closeArtistDetail()">← 목록으로 돌아가기</div>
             </div>
         </div>
 
-        <!-- 탭 2: 버블 채팅 -->
+        <!-- 탭 2: 채팅 화면 -->
         <div id="tab2" class="tab-content card-box">
             <div id="chatListView">
                 <div class="top-header">채팅 목록 💭</div>
@@ -419,6 +513,7 @@
                 <div class="mypage-title" id="displayNickname" style="font-size:1.4rem; color:#01579B;">비눗방울</div>
                 <div id="displayId" style="font-size:0.9rem; color:#78909C; margin-top:4px;">@guest_bubble</div>
                 
+                <!-- 회원가입 및 로그인 버튼 분리 -->
                 <div class="auth-btn-group" id="authButtonGroup">
                     <button class="auth-action-btn" onclick="openSignupModal()">회원가입</button>
                     <button class="auth-action-btn login-sub-btn" onclick="openLoginModal()">로그인</button>
@@ -429,28 +524,25 @@
 
     </div>
 
-    <!-- 모달 1: 회원가입 (한글 아이디 제한) -->
+    <!-- 모달 1: 회원가입 -->
     <div class="modal-overlay" id="signupModal">
         <div class="modal-content">
             <span class="close-modal" onclick="closeModal('signupModal')">×</span>
-            <div style="font-size:1.3rem; color:#01579B; font-weight:bold;">비눗방울 회원가입 🫧</div>
-            <label style="font-size:0.85rem; color:#555;">닉네임</label>
+            <div style="font-size:1.2rem; color:#01579B;">비눗방울 회원가입 🫧</div>
+            <label style="font-size:0.85rem;">닉네임</label>
             <input type="text" id="inputSignupNickname" class="modal-input" placeholder="닉네임 입력">
-            <label style="font-size:0.85rem; color:#555;">아이디 (영문 및 숫자만 가능)</label>
+            <label style="font-size:0.85rem;">아이디 (영문 필수)</label>
             <input type="text" id="inputSignupUserId" class="modal-input" placeholder="영문 아이디 입력">
             <button class="modal-save-btn" onclick="processSignup()">가입 완료</button>
         </div>
     </div>
 
-    <!-- 모달 2: 로그인 (기기 내 저장 계정 전체 목록 기능) -->
+    <!-- 모달 2: 로그인 -->
     <div class="modal-overlay" id="loginModal">
         <div class="modal-content">
             <span class="close-modal" onclick="closeModal('loginModal')">×</span>
-            <div style="font-size:1.3rem; color:#01579B; font-weight:bold;">비눗방울 로그인 🔑</div>
-            <div style="font-size:0.85rem; color:#666;">기기에 저장된 계정을 클릭하거나 직접 로그인하세요.</div>
-            <div id="deviceAccountList" style="display:flex; flex-direction:column; gap:8px; max-height:160px; overflow-y:auto; margin-top:4px;"></div>
-            <hr style="border:0; border-top:1px solid #B3E5FC; margin:4px 0;">
-            <label style="font-size:0.85rem; color:#555;">직접 아이디 입력</label>
+            <div style="font-size:1.2rem; color:#01579B;">비눗방울 로그인 🔑</div>
+            <label style="font-size:0.85rem;">기존 아이디 입력</label>
             <input type="text" id="inputLoginUserId" class="modal-input" placeholder="가입했던 아이디 입력">
             <button class="modal-save-btn" onclick="processLogin()">로그인 하기</button>
         </div>
@@ -460,10 +552,10 @@
     <div class="modal-overlay" id="editProfileModal">
         <div class="modal-content">
             <span class="close-modal" onclick="closeModal('editProfileModal')">×</span>
-            <div style="font-size:1.3rem; color:#01579B; font-weight:bold;">프로필 수정 ✏️</div>
-            <label style="font-size:0.85rem; color:#555;">닉네임</label>
+            <div style="font-size:1.2rem; color:#01579B;">프로필 수정 ✏️</div>
+            <label style="font-size:0.85rem;">닉네임</label>
             <input type="text" id="inputEditNickname" class="modal-input" placeholder="닉네임 입력">
-            <label style="font-size:0.85rem; color:#555;">아이디 (영문/숫자)</label>
+            <label style="font-size:0.85rem;">아이디</label>
             <input type="text" id="inputEditUserId" class="modal-input" placeholder="아이디 입력">
             <button class="modal-save-btn" onclick="saveEditedUserInfo()">저장하기</button>
         </div>
@@ -473,15 +565,15 @@
     <div class="modal-overlay" id="ticketListModal">
         <div class="modal-content">
             <span class="close-modal" onclick="closeModal('ticketListModal')">×</span>
-            <div style="font-size:1.3rem; color:#01579B; font-weight:bold;">내가 끊은 방울권 🎟️</div>
+            <div style="font-size:1.2rem; color:#01579B;">내가 끊은 방울권 🎟️</div>
             <div id="myTicketList" style="display:flex; flex-direction:column; gap:10px; max-height:280px; overflow-y:auto;"></div>
         </div>
     </div>
 
-    <!-- 모달 5: 계정관리 (로그아웃/탈퇴) -->
+    <!-- 모달 5: 로그아웃 및 회원 탈퇴 -->
     <div class="modal-overlay" id="logoutModal">
         <div class="modal-content" style="text-align:center;">
-            <div style="font-size:1.3rem; color:#01579B; font-weight:bold;">계정 관리</div>
+            <div style="font-size:1.2rem; color:#01579B; font-weight:bold;">계정 관리</div>
             <div style="font-size:1rem; color:#555; margin:10px 0;">원하시는 작업을 선택해주세요.</div>
             <div style="display:flex; flex-direction:column; gap:10px;">
                 <button class="modal-save-btn" style="background:#0288D1;" onclick="processLogout()">로그아웃</button>
@@ -491,45 +583,49 @@
         </div>
     </div>
 
-    <!-- 모달 6: 가입한 유저 목록 (관리자) -->
+    <!-- 모달 6: 관리자 전용 회원가입 유저 목록 (gpepsl) -->
     <div class="modal-overlay" id="userListModal">
         <div class="modal-content">
             <span class="close-modal" onclick="closeModal('userListModal')">×</span>
-            <div style="font-size:1.3rem; color:#01579B; font-weight:bold;">가입한 유저 목록 👥</div>
+            <div style="font-size:1.2rem; color:#01579B;">가입한 유저 목록 👥</div>
             <div id="registeredUserList" style="display:flex; flex-direction:column; gap:8px; max-height:280px; overflow-y:auto;"></div>
         </div>
     </div>
 
-    <!-- 모달 7: 알림 -->
+    <!-- 모달 7: 알림 및 물방울 신청/승인 목록 -->
     <div class="modal-overlay" id="notiModal">
         <div class="modal-content">
             <span class="close-modal" onclick="closeModal('notiModal')">×</span>
-            <div style="font-size:1.3rem; color:#01579B; font-weight:bold;">알림 🔔</div>
+            <div style="font-size:1.2rem; color:#01579B;">알림 🔔</div>
             <div id="notiList" style="display:flex; flex-direction:column; gap:10px; max-height:280px; overflow-y:auto;"></div>
         </div>
     </div>
 
-    <!-- 모달 8: 아티스트 이름 결정 -->
+    <!-- 모달 8: 승낙 후 아티스트 이름 설정 -->
     <div class="modal-overlay" id="setArtistNameModal">
         <div class="modal-content">
-            <div style="font-size:1.2rem; color:#01579B; font-weight:bold;">🎉 물방울 신청 승낙완료</div>
-            <div style="font-size:0.9rem; color:#666;">아티스트 화면에 표시될 이름을 설정해주세요.</div>
+            <div style="font-size:1.15rem; color:#01579B;">🎉 축하합니다! 물방울 승낙완료</div>
+            <div style="font-size:0.9rem; color:#666;">첫 번째 화면에 표시될 물방울 이름을 입력해주세요.</div>
             <input type="text" id="inputNewArtistName" class="modal-input" placeholder="예: 봄날의햇살">
-            <button class="modal-save-btn" onclick="confirmArtistName()">이름 설정하기</button>
+            <button class="modal-save-btn" onclick="confirmArtistName()">이름 결정하기</button>
         </div>
+    </div>
+
+    <div class="nav-bar" id="bottomNavBar" style="display: none;">
+        <button class="nav-btn active" onclick="switchTab(1)"><svg viewBox="0 0 24 24"><path d="M12 2.69l5.66 5.66a8 8 0 1 1-11.31 0z"></path></svg></button>
+        <button class="nav-btn" onclick="switchTab(2)"><svg viewBox="0 0 24 24"><path d="M21 15a2 2 0 0 1-2 2H7l-4 4V5a2 2 0 0 1 2-2h14a2 2 0 0 1 2 2z"></path></svg></button>
+        <button class="nav-btn" onclick="switchTab(3)"><svg viewBox="0 0 24 24"><path d="M20 21v-2a4 4 0 0 0-4-4H8a4 4 0 0 0-4 4v2"></path><circle cx="12" cy="7" r="4"></circle></svg></button>
     </div>
 
     <script>
         let isSignedUp = false;
         let currentUser = { nickname: '', userId: '' };
         
-        // 혜린 프로필 기본 물방울로 설정
         let artists = [
-            { id: 'hyerin', linkedUserId: 'gpepsl', name: '혜린', avatar: '💧', desc: '광버블 아티스트' }
+            { id: 'hyerin', linkedUserId: 'gpepsl', name: '혜린', avatar: '👩🏻', desc: '광버블 아티스트' }
         ];
 
-        let subscribedTickets = {}; 
-        let subscribedFirstTime = {}; 
+        let subscribedTickets = []; 
         let chatHistories = {}; 
         
         let registeredUsers = []; 
@@ -545,16 +641,15 @@
                 setTimeout(() => {
                     splash.style.display = 'none';
                     const isStandalone = window.matchMedia('(display-mode: standalone)').matches || window.navigator.standalone;
-                    if (isStandalone || true) { // 웹 및 앱 환경 공통 실행
+                    if (isStandalone) {
                         document.getElementById('appMainContainer').style.display = 'flex';
-                        document.getElementById('topNavBar').style.display = 'flex';
-                        document.getElementById('safariGuideContainer').style.display = 'none';
+                        document.getElementById('bottomNavBar').style.display = 'flex';
                         renderArtistList();
                     } else {
                         document.getElementById('safariGuideContainer').style.display = 'flex';
                     }
                 }, 600);
-            }, 1800);
+            }, 2000);
         });
 
         function switchTab(tabIndex) {
@@ -632,24 +727,17 @@
             document.getElementById('detailName').innerText = artist.name;
 
             const actionArea = document.getElementById('subscribeActionArea');
-            const editNameArea = document.getElementById('artistEditNameArea');
             const isSelfArtist = (artist.linkedUserId && artist.linkedUserId === currentUser.userId);
 
-            // 본인 아티스트 계정 시 이름 수정 허용
             if (isSelfArtist) {
-                editNameArea.style.display = 'block';
-                document.getElementById('inputModifyArtistName').value = artist.name;
                 actionArea.innerHTML = `
                     <div class="subscribed-tag">✨ 본인 아티스트 계정입니다</div>
-                    <button class="subscribe-btn" style="margin-top:10px;" onclick="goToChatFromDetail('${artist.id}')">내 버블 채팅방 이동</button>
+                    <button class="subscribe-btn" style="margin-top:10px;" onclick="goToChatFromDetail('${artist.id}')">내 버블 방 이동</button>
                 `;
                 return;
-            } else {
-                editNameArea.style.display = 'none';
             }
 
-            const ticketKey = `${artist.id}_${currentUser.userId}`;
-            const isSubbed = subscribedTickets[ticketKey];
+            const isSubbed = subscribedTickets.includes(artist.id);
             if (isSubbed) {
                 actionArea.innerHTML = `
                     <div class="subscribed-tag">이미 끊은 방울권입니다! ✨</div>
@@ -662,44 +750,14 @@
             }
         }
 
-        function saveArtistNameChange() {
-            const newName = document.getElementById('inputModifyArtistName').value.trim();
-            if (!newName) {
-                showToast("변경할 이름을 입력해주세요!");
-                return;
-            }
-            const myArtist = artists.find(a => a.linkedUserId === currentUser.userId);
-            if (myArtist) {
-                myArtist.name = newName;
-                document.getElementById('detailName').innerText = newName;
-                showToast("아티스트 이름이 수정되었습니다!");
-                renderArtistList();
-            }
-        }
-
         function closeArtistDetail() {
             document.getElementById('artistDetailView').style.display = 'none';
             document.getElementById('artistListView').style.display = 'block';
         }
 
         function buyTicket(artistId) {
-            const ticketKey = `${artistId}_${currentUser.userId}`;
-            if (!subscribedTickets[ticketKey]) {
-                subscribedTickets[ticketKey] = true;
-                
-                // 처음 구매한 경우에만 환영 메시지 생성 (기존 가입했던 팬들에게는 보이지 않음)
-                const welcomeKey = `${artistId}_${currentUser.userId}_welcomed`;
-                if (!subscribedFirstTime[welcomeKey]) {
-                    subscribedFirstTime[welcomeKey] = true;
-                    if (!chatHistories[artistId]) chatHistories[artistId] = [];
-                    chatHistories[artistId].push({
-                        id: 'welcome_' + Date.now(),
-                        sender: 'artist',
-                        text: '안녕! 광버블에 온걸 환영해 💧✨',
-                        isWelcome: true,
-                        forUserId: currentUser.userId
-                    });
-                }
+            if (!subscribedTickets.includes(artistId)) {
+                subscribedTickets.push(artistId);
             }
             showToast("방울권 끊기 성공!");
             const artist = artists.find(a => a.id === artistId);
@@ -707,8 +765,7 @@
         }
 
         function cancelTicket(artistId) {
-            const ticketKey = `${artistId}_${currentUser.userId}`;
-            delete subscribedTickets[ticketKey];
+            subscribedTickets = subscribedTickets.filter(id => id !== artistId);
             showToast("방울권이 취소되었습니다.");
             openMyTicketsModal();
             renderChatList();
@@ -723,13 +780,11 @@
         function renderChatList() {
             const container = document.getElementById('chatListContainer');
             
-            let activeChatIds = [];
-            artists.forEach(artist => {
-                const ticketKey = `${artist.id}_${currentUser.userId}`;
-                if (subscribedTickets[ticketKey] || artist.linkedUserId === currentUser.userId) {
-                    activeChatIds.push(artist.id);
-                }
-            });
+            let activeChatIds = [...subscribedTickets];
+            const myArtist = artists.find(a => a.linkedUserId === currentUser.userId);
+            if (myArtist && !activeChatIds.includes(myArtist.id)) {
+                activeChatIds.unshift(myArtist.id);
+            }
 
             if (activeChatIds.length === 0) {
                 container.innerHTML = `
@@ -769,7 +824,9 @@
             document.getElementById('chatRoomTitle').innerText = `💬 ${artist.name}와의 버블 채팅`;
 
             if (!chatHistories[artistId]) {
-                chatHistories[artistId] = [];
+                chatHistories[artistId] = [
+                    { sender: artist.name, text: `안녕! 광버블에 온 걸 환영해 💧✨`, isArtistSender: true }
+                ];
             }
             renderMessages();
         }
@@ -788,45 +845,24 @@
             const isIAtmArtist = (targetArtist && targetArtist.linkedUserId === currentUser.userId);
 
             history.forEach(msg => {
-                // 환영 메시지 필터링 (최초 가입한 해당 유저에게만 보임)
-                if (msg.isWelcome && msg.forUserId !== currentUser.userId) {
-                    return;
-                }
-
-                const card = document.createElement('div');
-
+                const bubble = document.createElement('div');
+                
                 if (isIAtmArtist) {
-                    // [아티스트 시점]: 모든 팬 메시지 확인 가능
-                    if (msg.sender === 'artist') {
-                        card.className = msg.isSharedReply ? 'msg-card shared-reply' : 'msg-card artist-sent';
-                        card.innerText = msg.text;
+                    if (msg.isArtistSender) {
+                        bubble.className = 'msg-bubble artist-sky-right';
                     } else {
-                        card.className = 'msg-card fan-sent';
-                        card.innerHTML = `
-                            <div style="font-size:0.75rem; color:#888;">[팬] ${msg.senderNickname} (@${msg.senderUserId})</div>
-                            <div>${msg.text}</div>
-                            <button class="artist-reply-btn" onclick="triggerArtistReply('${msg.id}')">답장하기</button>
-                        `;
+                        bubble.className = 'msg-bubble white-left';
                     }
                 } else {
-                    // [팬 시점]: 자기가 보낸 메시지, 아티스트 메시지, 답장만 표출 (다른 팬들의 ID/닉네임 및 일반 메시지 절대 숨김)
-                    if (msg.sender === 'artist' || msg.isSharedReply) {
-                        card.className = msg.isSharedReply ? 'msg-card shared-reply' : 'msg-card artist-sent';
-                        let contentHtml = '';
-                        if (msg.isSharedReply) {
-                            contentHtml += `<div class="reply-target-box">↩ 답장됨</div>`;
-                        }
-                        contentHtml += `<div>${msg.text}</div>`;
-                        card.innerHTML = contentHtml;
-                    } else if (msg.senderUserId === currentUser.userId) {
-                        card.className = 'msg-card fan-sent';
-                        card.innerText = msg.text;
+                    if (msg.isArtistSender) {
+                        bubble.className = 'msg-bubble artist-sky';
                     } else {
-                        // 타 팬이 보낸 일반 채팅은 보이지 않음
-                        return;
+                        bubble.className = 'msg-bubble white-right';
                     }
                 }
-                container.appendChild(card);
+
+                bubble.innerText = msg.text;
+                container.appendChild(bubble);
             });
             container.scrollTop = container.scrollHeight;
         }
@@ -839,45 +875,17 @@
             const targetArtist = artists.find(a => a.id === currentChatArtistId);
             const isIAtmArtist = (targetArtist && targetArtist.linkedUserId === currentUser.userId);
 
-            if (!chatHistories[currentChatArtistId]) chatHistories[currentChatArtistId] = [];
-
             chatHistories[currentChatArtistId].push({
-                id: 'msg_' + Date.now(),
-                sender: isIAtmArtist ? 'artist' : 'fan',
-                senderUserId: currentUser.userId,
-                senderNickname: currentUser.nickname,
+                sender: currentUser.nickname,
                 text: text,
-                isSharedReply: false
+                isArtistSender: isIAtmArtist
             });
 
             input.value = '';
             renderMessages();
         }
 
-        // 아티스트가 메시지 답장 시 다른 팬들에게 원본 팬의 인적사항 없이 내용만 공유
-        function triggerArtistReply(msgId) {
-            const history = chatHistories[currentChatArtistId];
-            const targetMsg = history.find(m => m.id === msgId);
-            if (!targetMsg) return;
-
-            const replyText = prompt("답장을 입력하세요 (팬들에게 공유됩니다):");
-            if (!replyText || !replyText.trim()) return;
-
-            history.push({
-                id: 'reply_' + Date.now(),
-                sender: 'artist',
-                senderUserId: currentUser.userId,
-                senderNickname: currentUser.nickname,
-                text: replyText.trim(),
-                originalText: targetMsg.text,
-                isSharedReply: true
-            });
-
-            renderMessages();
-            showToast("답장이 전송되었습니다.");
-        }
-
-        // 회원가입 (한글 아이디 완전 차단 및 영문 규칙 적용)
+        // 회원가입 전용 함수 (중복 체크 철저히 수행)
         function processSignup() {
             const nick = document.getElementById('inputSignupNickname').value.trim();
             const uid = document.getElementById('inputSignupUserId').value.trim();
@@ -887,15 +895,8 @@
                 return;
             }
 
-            // 아이디 영문/숫자 검증
-            const englishRegex = /^[A-Za-z0-9_]+$/;
-            if (!englishRegex.test(uid)) {
-                showToast("아이디에 한글을 사용할 수 없습니다! 영문과 숫자만 입력해주세요.");
-                return;
-            }
-
             if (registeredUsers.some(u => u.userId === uid)) {
-                showToast("이미 등록된 아이디입니다. 로그인 기능을 이용해주세요!");
+                showToast("이미 존재하는 아이디입니다. 로그인 버튼을 이용해주세요!");
                 return;
             }
 
@@ -908,60 +909,12 @@
                 if (hyerinArtist) hyerinArtist.linkedUserId = 'gpepsl';
             }
 
-            // 입력 필드 초기화
-            document.getElementById('inputSignupNickname').value = '';
-            document.getElementById('inputSignupUserId').value = '';
-
             closeModal('signupModal');
             showToast("회원가입 완료!");
             applyUserSessionState();
         }
 
-        function openSignupModal() {
-            document.getElementById('inputSignupNickname').value = '';
-            document.getElementById('inputSignupUserId').value = '';
-            openModal('signupModal');
-        }
-
-        // 로그인 모달 열 시 기기 내 계정 목록 제공
-        function openLoginModal() {
-            document.getElementById('inputLoginUserId').value = '';
-            const container = document.getElementById('deviceAccountList');
-            container.innerHTML = '';
-
-            if (registeredUsers.length === 0) {
-                container.innerHTML = '<div style="font-size:0.85rem; color:#888; text-align:center; padding:10px;">기기에 저장된 계정이 없습니다. 회원가입을 먼저 진행하세요.</div>';
-            } else {
-                registeredUsers.forEach(u => {
-                    const item = document.createElement('div');
-                    item.className = 'account-select-item';
-                    item.innerHTML = `
-                        <div><strong>${u.nickname}</strong> <span style="font-size:0.8rem; color:#78909C;">@${u.userId}</span></div>
-                        <span style="font-size:0.85rem; color:#0288D1; font-weight:bold;">선택 ›</span>
-                    `;
-                    item.onclick = () => loginWithAccount(u.userId);
-                    container.appendChild(item);
-                });
-            }
-            openModal('loginModal');
-        }
-
-        function loginWithAccount(uid) {
-            const foundUser = registeredUsers.find(u => u.userId === uid);
-            if (!foundUser) return;
-
-            currentUser = { nickname: foundUser.nickname, userId: foundUser.userId };
-            isSignedUp = true;
-            if (currentUser.userId === 'gpepsl') {
-                const hyerinArtist = artists.find(a => a.id === 'hyerin');
-                if (hyerinArtist) hyerinArtist.linkedUserId = 'gpepsl';
-            }
-
-            closeModal('loginModal');
-            showToast(`${currentUser.nickname}님 환영합니다!`);
-            applyUserSessionState();
-        }
-
+        // 로그인 전용 함수 (기존 데이터와 아이디가 일치하면 곧바로 로그인)
         function processLogin() {
             const uid = document.getElementById('inputLoginUserId').value.trim();
 
@@ -972,11 +925,12 @@
 
             const foundUser = registeredUsers.find(u => u.userId === uid);
             if (!foundUser) {
+                // 가입 내역에 없더라도 gpepsl 관리자 계정은 즉시 예외 로그인 허용
                 if (uid === 'gpepsl') {
                     currentUser = { nickname: '관리자', userId: 'gpepsl' };
                     registeredUsers.push(currentUser);
                 } else {
-                    showToast("존재하지 않는 아이디입니다. 회원가입을 먼저 진행해주세요!");
+                    showToast("존재하지 않는 아이디입니다. 먼저 회원가입을 진행해주세요!");
                     return;
                 }
             } else {
@@ -989,7 +943,6 @@
                 if (hyerinArtist) hyerinArtist.linkedUserId = 'gpepsl';
             }
 
-            document.getElementById('inputLoginUserId').value = '';
             closeModal('loginModal');
             showToast(`${currentUser.nickname}님 환영합니다!`);
             applyUserSessionState();
@@ -1043,13 +996,7 @@
             const oldUserId = currentUser.userId;
 
             if (!nick || !uid) {
-                showToast("닉네임과 아이디를 입력해주세요!");
-                return;
-            }
-
-            const englishRegex = /^[A-Za-z0-9_]+$/;
-            if (!englishRegex.test(uid)) {
-                showToast("아이디는 영문과 숫자만 사용 가능합니다!");
+                showToast("닉네임과 아이디를 모두 입력해주세요!");
                 return;
             }
 
@@ -1059,14 +1006,23 @@
                 return;
             }
 
-            const existingIndex = registeredUsers.findIndex(u => u.userId === oldUserId);
-            if (existingIndex !== -1) {
-                registeredUsers[existingIndex] = { userId: uid, nickname: nick };
+            const existingUserIndex = registeredUsers.findIndex(u => u.userId === oldUserId);
+            if (existingUserIndex !== -1) {
+                registeredUsers[existingUserIndex] = { userId: uid, nickname: nick };
             }
 
             artists.forEach(a => {
                 if (a.linkedUserId === oldUserId) a.linkedUserId = uid;
             });
+
+            bubbleRequests.forEach(r => {
+                if (r.userId === oldUserId) r.userId = uid;
+            });
+
+            if (userNotifications[oldUserId]) {
+                userNotifications[uid] = userNotifications[oldUserId];
+                delete userNotifications[oldUserId];
+            }
 
             currentUser = { nickname: nick, userId: uid };
             closeModal('editProfileModal');
@@ -1081,18 +1037,15 @@
             const container = document.getElementById('myTicketList');
             container.innerHTML = '';
 
-            let mySubbedArtistIds = [];
-            artists.forEach(artist => {
-                const ticketKey = `${artist.id}_${currentUser.userId}`;
-                if (subscribedTickets[ticketKey] && artist.linkedUserId !== currentUser.userId) {
-                    mySubbedArtistIds.push(artist.id);
-                }
+            const filteredTickets = subscribedTickets.filter(id => {
+                const artist = artists.find(a => a.id === id);
+                return !(artist && artist.linkedUserId === currentUser.userId);
             });
 
-            if (mySubbedArtistIds.length === 0) {
+            if (filteredTickets.length === 0) {
                 container.innerHTML = '<div style="text-align:center; color:#888; padding:20px;">구독 중인 방울권이 없습니다.</div>';
             } else {
-                mySubbedArtistIds.forEach(id => {
+                filteredTickets.forEach(id => {
                     const artist = artists.find(a => a.id === id);
                     const item = document.createElement('div');
                     item.style.cssText = 'display:flex; justify-content:space-between; align-items:center; padding:10px; border-bottom:1px solid #eee;';
@@ -1110,7 +1063,7 @@
 
         function requestBubble() {
             if (currentUser.userId === 'gpepsl' || artists.some(a => a.linkedUserId === currentUser.userId)) {
-                showToast("이미 아티스트이므로 신청이 불가능합니다.");
+                showToast("이미 아티스트이므로 물방울 신청이 불가능합니다.");
                 return;
             }
 
@@ -1182,7 +1135,7 @@
                 if (!userNotifications[applicantUserId]) userNotifications[applicantUserId] = [];
                 userNotifications[applicantUserId].push({
                     type: 'approved',
-                    msg: '🎉 물방울 신청이 승낙되었습니다! 사용할 이름을 설정해보세요.'
+                    msg: '🎉 물방울 신청이 승낙되었습니다! 사용할 이름을 정해보세요.'
                 });
                 showToast("물방울 신청을 승낙했습니다!");
                 openNotificationModal();
@@ -1216,7 +1169,6 @@
                 userNotifications[currentUser.userId].splice(currentNotiIndex, 1);
             }
 
-            document.getElementById('inputNewArtistName').value = '';
             closeModal('setArtistNameModal');
             showToast("새로운 물방울 아티스트로 등록되었습니다!");
             renderArtistList();
@@ -1241,6 +1193,7 @@
             
             isSignedUp = false;
             currentUser = { nickname: '', userId: '' };
+            subscribedTickets = [];
             closeModal('logoutModal');
             showToast("로그아웃 되었습니다.");
             resetToInitialState();
@@ -1257,6 +1210,7 @@
 
             isSignedUp = false;
             currentUser = { nickname: '', userId: '' };
+            subscribedTickets = [];
 
             closeModal('logoutModal');
             showToast("회원 탈퇴가 완료되었습니다.");
@@ -1274,6 +1228,8 @@
             recalculateNotiCount();
         }
 
+        function openSignupModal() { openModal('signupModal'); }
+        function openLoginModal() { openModal('loginModal'); }
         function openModal(id) { document.getElementById(id).style.display = 'flex'; }
         function closeModal(id) { document.getElementById(id).style.display = 'none'; }
 
