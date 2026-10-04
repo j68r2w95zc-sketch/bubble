@@ -673,7 +673,7 @@
     <script type="module">
         import { initializeApp } from "https://www.gstatic.com/firebasejs/10.8.0/firebase-app.js";
         import { getAuth, signInAnonymously } from "https://www.gstatic.com/firebasejs/10.8.0/firebase-auth.js";
-        import { getFirestore, collection, addDoc, query, orderBy, onSnapshot, serverTimestamp } from "https://www.gstatic.com/firebasejs/10.8.0/firebase-firestore.js";
+        import { getFirestore, collection, addDoc, query, orderBy, onSnapshot, serverTimestamp, doc, setDoc, deleteDoc, updateDoc } from "https://www.gstatic.com/firebasejs/10.8.0/firebase-firestore.js";
 
         const firebaseConfig = {
             apiKey: "AIzaSyAZWuBetWOeffq13ho126kUkbR0qDNnWis",
@@ -689,63 +689,69 @@
         const auth = getAuth(app);
         const db = getFirestore(app);
 
-        // Firebase 익명 인증 연동 (보안 규칙 에러 방지)
-        signInAnonymously(auth).catch((error) => {
-            console.error("Firebase 익명 로그인 실패:", error);
-        });
+        // 이 기기의 로그인 상태만 localStorage에 저장 (나머지 데이터는 전부 Firestore)
+        let currentUser = JSON.parse(localStorage.getItem('gb_current_user')) || { nickname: '', userId: '' };
+        let isSignedUp = !!currentUser.userId;
 
-        const bc = new BroadcastChannel('guang_bubble_channel_v2');
-
-        let savedUser = JSON.parse(localStorage.getItem('gb_current_user'));
-        let currentUser = savedUser || { nickname: '', userId: '' };
-        let isSignedUp = !!(currentUser && currentUser.userId);
-
-        let artists = JSON.parse(localStorage.getItem('gb_artists')) || [
-            { id: 'artist_default', linkedUserId: 'gpepsl', name: '혜린', avatar: '💧', desc: '광버블 아티스트' }
-        ];
-
-        let subscribedTickets = isSignedUp ? (JSON.parse(localStorage.getItem('gb_tickets_' + currentUser.userId)) || []) : [];
-        let registeredUsers = JSON.parse(localStorage.getItem('gb_registered_users')) || [
-            { userId: 'gpepsl', nickname: '혜린' }
-        ];
-        let bubbleRequests = JSON.parse(localStorage.getItem('gb_bubble_requests')) || [];
-        let userNotifications = JSON.parse(localStorage.getItem('gb_user_notifications')) || {};
+        let artists = [];
+        let registeredUsers = [];
+        let bubbleRequests = [];
+        let userNotifications = {};
+        let allTickets = [];
+        let subscribedTickets = [];
 
         let unreadNotiCount = 0;
         let currentChatArtistId = null;
         let replyingToMsg = null;
         let currentMessagesCache = [];
 
+        // Firebase 익명 인증 후 실시간 동기화 시작
+        signInAnonymously(auth).then(startSync).catch((error) => {
+            console.error("Firebase 익명 로그인 실패:", error);
+        });
+
+        function startSync() {
+            onSnapshot(collection(db, 'artists'), (snap) => {
+                if (snap.empty) {
+                    setDoc(doc(db, 'artists', 'artist_default'), { linkedUserId: 'gpepsl', name: '혜린', avatar: '💧', desc: '광버블 아티스트' });
+                }
+                artists = snap.docs.map(d => ({ id: d.id, ...d.data() }));
+                refreshUI();
+            });
+            onSnapshot(collection(db, 'users'), (snap) => {
+                registeredUsers = snap.docs.map(d => d.data());
+            });
+            onSnapshot(collection(db, 'requests'), (snap) => {
+                bubbleRequests = snap.docs.map(d => d.data());
+                refreshUI();
+            });
+            onSnapshot(collection(db, 'tickets'), (snap) => {
+                allTickets = snap.docs.map(d => d.data());
+                refreshUI();
+            });
+            onSnapshot(collection(db, 'notifications'), (snap) => {
+                userNotifications = {};
+                snap.docs.forEach(d => {
+                    const n = { id: d.id, ...d.data() };
+                    if (!userNotifications[n.toUserId]) userNotifications[n.toUserId] = [];
+                    userNotifications[n.toUserId].push(n);
+                });
+                refreshUI();
+            });
+            initFirestoreRealtimeChat();
+        }
+
+        function refreshUI() {
+            subscribedTickets = allTickets.filter(t => t.userId === currentUser.userId).map(t => t.artistId);
+            renderArtistList();
+            if (!currentChatArtistId) renderChatList();
+            recalculateNotiCount();
+        }
+
         function saveData() {
             if (currentUser.userId) {
                 localStorage.setItem('gb_current_user', JSON.stringify(currentUser));
-                localStorage.setItem('gb_tickets_' + currentUser.userId, JSON.stringify(subscribedTickets));
             }
-            localStorage.setItem('gb_artists', JSON.stringify(artists));
-            localStorage.setItem('gb_registered_users', JSON.stringify(registeredUsers));
-            localStorage.setItem('gb_bubble_requests', JSON.stringify(bubbleRequests));
-            localStorage.setItem('gb_user_notifications', JSON.stringify(userNotifications));
-
-            bc.postMessage({ type: 'sync_all_data' });
-        }
-
-        bc.onmessage = (event) => {
-            if (event.data.type === 'sync_all_data') {
-                reloadAppDataFromStorage();
-            }
-        };
-
-        function reloadAppDataFromStorage() {
-            artists = JSON.parse(localStorage.getItem('gb_artists')) || artists;
-            registeredUsers = JSON.parse(localStorage.getItem('gb_registered_users')) || registeredUsers;
-            bubbleRequests = JSON.parse(localStorage.getItem('gb_bubble_requests')) || bubbleRequests;
-            userNotifications = JSON.parse(localStorage.getItem('gb_user_notifications')) || userNotifications;
-            
-            if (currentUser.userId) {
-                subscribedTickets = JSON.parse(localStorage.getItem('gb_tickets_' + currentUser.userId)) || [];
-            }
-            renderArtistList();
-            recalculateNotiCount();
         }
 
         window.addEventListener('DOMContentLoaded', () => {
@@ -764,8 +770,6 @@
                     }
                 }, 600);
             }, 1500);
-
-            initFirestoreRealtimeChat();
         });
 
         function initAppUI() {
@@ -889,28 +893,39 @@
             document.getElementById('artistListView').style.display = 'block';
         }
 
-        window.buyTicket = function(artistId) {
+        window.buyTicket = async function(artistId) {
             if (!isSignedUp || !currentUser.userId) {
                 showToast("회원가입을 먼저 해주세요!");
                 switchTab(3);
                 openSignupModal();
                 return;
             }
-            if (!subscribedTickets.includes(artistId)) {
-                subscribedTickets.push(artistId);
-                saveData();
+            try {
+                await setDoc(doc(db, 'tickets', currentUser.userId + '_' + artistId), {
+                    userId: currentUser.userId,
+                    artistId: artistId
+                });
+                if (!subscribedTickets.includes(artistId)) subscribedTickets.push(artistId);
+                showToast("방울권 끊기 성공!");
+                const artist = artists.find(a => a.id === artistId);
+                openArtistDetail(artist);
+            } catch (e) {
+                console.error(e);
+                showToast("오류가 발생했습니다. 다시 시도해주세요.");
             }
-            showToast("방울권 끊기 성공!");
-            const artist = artists.find(a => a.id === artistId);
-            openArtistDetail(artist);
         }
 
-        window.cancelTicket = function(artistId) {
-            subscribedTickets = subscribedTickets.filter(id => id !== artistId);
-            saveData();
-            showToast("방울권이 취소되었습니다.");
-            openMyTicketsModal();
-            renderChatList();
+        window.cancelTicket = async function(artistId) {
+            try {
+                await deleteDoc(doc(db, 'tickets', currentUser.userId + '_' + artistId));
+                subscribedTickets = subscribedTickets.filter(id => id !== artistId);
+                showToast("방울권이 취소되었습니다.");
+                openMyTicketsModal();
+                renderChatList();
+            } catch (e) {
+                console.error(e);
+                showToast("오류가 발생했습니다. 다시 시도해주세요.");
+            }
         }
 
         window.goToChatFromDetail = function(artistId) {
@@ -1120,7 +1135,7 @@
             openModal('signupModal');
         }
 
-        window.processSignup = function() {
+        window.processSignup = async function() {
             const nick = document.getElementById('inputNickname').value.trim();
             const uid = document.getElementById('inputUserId').value.trim();
 
@@ -1139,10 +1154,16 @@
                 return;
             }
 
-            registeredUsers.push({ userId: uid, nickname: nick });
+            try {
+                await setDoc(doc(db, 'users', uid), { userId: uid, nickname: nick });
+            } catch (e) {
+                console.error(e);
+                showToast("가입에 실패했습니다. 다시 시도해주세요.");
+                return;
+            }
+
             currentUser = { nickname: nick, userId: uid };
             isSignedUp = true;
-            subscribedTickets = JSON.parse(localStorage.getItem('gb_tickets_' + currentUser.userId)) || [];
 
             saveData();
             closeModal('signupModal');
@@ -1154,6 +1175,7 @@
             
             renderMypageMenu();
             initAppUI();
+            refreshUI();
         }
 
         window.openLoginModal = function() {
@@ -1183,9 +1205,8 @@
         }
 
         function selectAccountToLogin(userObj) {
-            currentUser = userObj;
+            currentUser = { nickname: userObj.nickname, userId: userObj.userId };
             isSignedUp = true;
-            subscribedTickets = JSON.parse(localStorage.getItem('gb_tickets_' + currentUser.userId)) || [];
             saveData();
             closeModal('loginModal');
             showToast(`${currentUser.nickname}님 환영합니다!`);
@@ -1196,6 +1217,7 @@
             
             renderMypageMenu();
             initAppUI();
+            refreshUI();
         }
 
         function renderMypageMenu() {
@@ -1246,7 +1268,7 @@
             openModal('editProfileModal');
         }
 
-        window.saveProfileChanges = function() {
+        window.saveProfileChanges = async function() {
             const newNick = document.getElementById('editNickname').value.trim();
             const newUid = document.getElementById('editUserId').value.trim();
             const newArtistNameVal = document.getElementById('editArtistName').value.trim();
@@ -1268,17 +1290,34 @@
                 return;
             }
 
-            const uIdx = registeredUsers.findIndex(u => u.userId === oldUserId);
-            if (uIdx !== -1) {
-                registeredUsers[uIdx] = { userId: newUid, nickname: newNick };
-            }
-
-            artists.forEach(a => {
-                if (a.linkedUserId === oldUserId) {
-                    a.linkedUserId = newUid;
-                    if (newArtistNameVal) a.name = newArtistNameVal;
+            try {
+                if (newUid !== oldUserId) {
+                    await deleteDoc(doc(db, 'users', oldUserId));
+                    for (const t of allTickets.filter(t => t.userId === oldUserId)) {
+                        await deleteDoc(doc(db, 'tickets', oldUserId + '_' + t.artistId));
+                        await setDoc(doc(db, 'tickets', newUid + '_' + t.artistId), { userId: newUid, artistId: t.artistId });
+                    }
+                    const myReq = bubbleRequests.find(r => r.userId === oldUserId);
+                    if (myReq) {
+                        await deleteDoc(doc(db, 'requests', oldUserId));
+                        await setDoc(doc(db, 'requests', newUid), { ...myReq, userId: newUid, nickname: newNick });
+                    }
+                    for (const n of (userNotifications[oldUserId] || [])) {
+                        await updateDoc(doc(db, 'notifications', n.id), { toUserId: newUid });
+                    }
                 }
-            });
+                await setDoc(doc(db, 'users', newUid), { userId: newUid, nickname: newNick });
+
+                for (const a of artists.filter(a => a.linkedUserId === oldUserId)) {
+                    const upd = { linkedUserId: newUid };
+                    if (newArtistNameVal) upd.name = newArtistNameVal;
+                    await updateDoc(doc(db, 'artists', a.id), upd);
+                }
+            } catch (e) {
+                console.error(e);
+                showToast("저장에 실패했습니다. 다시 시도해주세요.");
+                return;
+            }
 
             currentUser = { nickname: newNick, userId: newUid };
             saveData();
@@ -1287,8 +1326,8 @@
 
             document.getElementById('displayNickname').innerText = currentUser.nickname;
             document.getElementById('displayId').innerText = '@' + currentUser.userId;
-            renderArtistList();
             renderMypageMenu();
+            refreshUI();
         }
 
         window.openMyTicketsModal = function() {
@@ -1297,7 +1336,7 @@
 
             const filteredTickets = subscribedTickets.filter(id => {
                 const artist = artists.find(a => a.id === id);
-                return !(artist && artist.linkedUserId === currentUser.userId);
+                return artist && artist.linkedUserId !== currentUser.userId;
             });
 
             if (filteredTickets.length === 0) {
@@ -1319,7 +1358,7 @@
             openModal('ticketListModal');
         }
 
-        window.requestBubble = function() {
+        window.requestBubble = async function() {
             if (currentUser.userId === 'gpepsl' || artists.some(a => a.linkedUserId === currentUser.userId)) {
                 showToast("이미 아티스트이므로 물방울 신청이 불가능합니다.");
                 return;
@@ -1330,15 +1369,17 @@
                 return;
             }
 
-            bubbleRequests.push({
-                userId: currentUser.userId,
-                nickname: currentUser.nickname,
-                status: 'pending'
-            });
-
-            saveData();
-            showToast("신청하였습니다.");
-            recalculateNotiCount();
+            try {
+                await setDoc(doc(db, 'requests', currentUser.userId), {
+                    userId: currentUser.userId,
+                    nickname: currentUser.nickname,
+                    status: 'pending'
+                });
+                showToast("신청하였습니다.");
+            } catch (e) {
+                console.error(e);
+                showToast("신청에 실패했습니다. 다시 시도해주세요.");
+            }
         }
 
         window.openNotificationModal = function() {
@@ -1370,12 +1411,12 @@
                 if (myNotis.length === 0) {
                     container.innerHTML = '<div style="text-align:center; color:#888; padding:20px;">받은 알림이 없습니다.</div>';
                 } else {
-                    myNotis.forEach((noti, index) => {
+                    myNotis.forEach((noti) => {
                         const item = document.createElement('div');
                         item.style.cssText = 'background:#F1F8FE; padding:12px; border-radius:12px; display:flex; flex-direction:column; gap:8px;';
                         item.innerHTML = `
                             <div>${noti.msg}</div>
-                            ${noti.type === 'approved' ? `<button onclick="openSetArtistNameModal('${index}')" style="background:#0288D1; color:white; border:none; padding:8px; border-radius:10px; cursor:pointer;">활동 이름 정하기</button>` : ''}
+                            ${noti.type === 'approved' ? `<button onclick="openSetArtistNameModal('${noti.id}')" style="background:#0288D1; color:white; border:none; padding:8px; border-radius:10px; cursor:pointer;">활동 이름 정하기</button>` : ''}
                         `;
                         container.appendChild(item);
                     });
@@ -1387,53 +1428,56 @@
             openModal('notiModal');
         }
 
-        window.approveBubble = function(applicantUserId) {
-            const req = bubbleRequests.find(r => r.userId === applicantUserId);
-            if (req) {
-                req.status = 'approved';
-                if (!userNotifications[applicantUserId]) userNotifications[applicantUserId] = [];
-                userNotifications[applicantUserId].push({
+        window.approveBubble = async function(applicantUserId) {
+            try {
+                await updateDoc(doc(db, 'requests', applicantUserId), { status: 'approved' });
+                await addDoc(collection(db, 'notifications'), {
+                    toUserId: applicantUserId,
                     type: 'approved',
                     msg: '🎉 물방울 신청이 승낙되었습니다! 사용할 이름을 정해보세요.'
                 });
-                saveData();
                 showToast("물방울 신청을 승낙했습니다!");
-                openNotificationModal();
+                setTimeout(openNotificationModal, 300);
+            } catch (e) {
+                console.error(e);
+                showToast("승낙에 실패했습니다. 다시 시도해주세요.");
             }
         }
 
-        let currentNotiIndex = null;
-        window.openSetArtistNameModal = function(index) {
-            currentNotiIndex = index;
+        let currentNotiId = null;
+        window.openSetArtistNameModal = function(notiId) {
+            currentNotiId = notiId;
             closeModal('notiModal');
             openModal('setArtistNameModal');
         }
 
-        window.confirmArtistName = function() {
+        window.confirmArtistName = async function() {
             const name = document.getElementById('inputNewArtistName').value.trim();
             if (!name) {
                 showToast("이름을 입력해주세요!");
                 return;
             }
 
-            const newId = 'artist_' + Date.now();
-            artists.push({
-                id: newId,
-                linkedUserId: currentUser.userId,
-                name: name,
-                avatar: '💧',
-                desc: '광버블 아티스트'
-            });
+            try {
+                const newId = 'artist_' + Date.now();
+                await setDoc(doc(db, 'artists', newId), {
+                    linkedUserId: currentUser.userId,
+                    name: name,
+                    avatar: '💧',
+                    desc: '광버블 아티스트'
+                });
 
-            if (userNotifications[currentUser.userId]) {
-                userNotifications[currentUser.userId].splice(currentNotiIndex, 1);
+                if (currentNotiId) {
+                    await deleteDoc(doc(db, 'notifications', currentNotiId));
+                }
+            } catch (e) {
+                console.error(e);
+                showToast("등록에 실패했습니다. 다시 시도해주세요.");
+                return;
             }
 
-            saveData();
             closeModal('setArtistNameModal');
             showToast("새로운 물방울 아티스트로 등록되었습니다!");
-            renderArtistList();
-            recalculateNotiCount();
             renderMypageMenu();
             switchTab(1);
         }
@@ -1459,29 +1503,40 @@
             
             isSignedUp = false;
             currentUser = { nickname: '', userId: '' };
+            subscribedTickets = [];
             localStorage.removeItem('gb_current_user');
             closeModal('logoutModal');
             showToast("로그아웃 되었습니다.");
             resetToInitialState();
         }
 
-        window.processDeleteAccount = function() {
+        window.processDeleteAccount = async function() {
             if (!confirm("정말 회원탈퇴를 하시겠습니까?")) return;
 
             const targetUid = currentUser.userId;
-            artists = artists.filter(a => a.linkedUserId !== targetUid);
-            registeredUsers = registeredUsers.filter(u => u.userId !== targetUid);
-            bubbleRequests = bubbleRequests.filter(r => r.userId !== targetUid);
-            delete userNotifications[targetUid];
-            if (targetUid) {
-                localStorage.removeItem('gb_tickets_' + targetUid);
+            try {
+                await deleteDoc(doc(db, 'users', targetUid));
+                await deleteDoc(doc(db, 'requests', targetUid));
+                for (const a of artists.filter(a => a.linkedUserId === targetUid)) {
+                    await deleteDoc(doc(db, 'artists', a.id));
+                }
+                for (const t of allTickets.filter(t => t.userId === targetUid)) {
+                    await deleteDoc(doc(db, 'tickets', targetUid + '_' + t.artistId));
+                }
+                for (const n of (userNotifications[targetUid] || [])) {
+                    await deleteDoc(doc(db, 'notifications', n.id));
+                }
+            } catch (e) {
+                console.error(e);
+                showToast("탈퇴 처리에 실패했습니다. 다시 시도해주세요.");
+                return;
             }
 
             isSignedUp = false;
             currentUser = { nickname: '', userId: '' };
+            subscribedTickets = [];
             localStorage.removeItem('gb_current_user');
 
-            saveData();
             closeModal('logoutModal');
             showToast("회원 탈퇴가 완료되었습니다.");
             resetToInitialState();
