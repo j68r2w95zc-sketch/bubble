@@ -674,7 +674,6 @@
         import { initializeApp } from "https://www.gstatic.com/firebasejs/10.8.0/firebase-app.js";
         import { getFirestore, collection, addDoc, query, orderBy, onSnapshot, serverTimestamp } from "https://www.gstatic.com/firebasejs/10.8.0/firebase-firestore.js";
 
-        // 본인의 Firebase 발급 설정값
         const firebaseConfig = {
             apiKey: "AIzaSyAZWuBetWOeffq13ho126kUkbR0qDNnWis",
             authDomain: "bubble-5267e.firebaseapp.com",
@@ -690,17 +689,15 @@
 
         const bc = new BroadcastChannel('guang_bubble_channel_v2');
 
-        let currentUser = JSON.parse(localStorage.getItem('gb_current_user')) || { nickname: '혜린', userId: 'gpepsl' };
-        if (!currentUser.userId) {
-            currentUser = { nickname: '혜린', userId: 'gpepsl' };
-        }
-        let isSignedUp = true;
+        let savedUser = JSON.parse(localStorage.getItem('gb_current_user'));
+        let currentUser = savedUser || { nickname: '', userId: '' };
+        let isSignedUp = !!(currentUser && currentUser.userId);
 
         let artists = JSON.parse(localStorage.getItem('gb_artists')) || [
             { id: 'artist_default', linkedUserId: 'gpepsl', name: '혜린', avatar: '💧', desc: '광버블 아티스트' }
         ];
 
-        let subscribedTickets = JSON.parse(localStorage.getItem('gb_tickets_' + currentUser.userId)) || [];
+        let subscribedTickets = isSignedUp ? (JSON.parse(localStorage.getItem('gb_tickets_' + currentUser.userId)) || []) : [];
         let registeredUsers = JSON.parse(localStorage.getItem('gb_registered_users')) || [
             { userId: 'gpepsl', nickname: '혜린' }
         ];
@@ -710,11 +707,14 @@
         let unreadNotiCount = 0;
         let currentChatArtistId = null;
         let replyingToMsg = null;
+        let currentMessagesCache = [];
 
         function saveData() {
-            localStorage.setItem('gb_current_user', JSON.stringify(currentUser));
+            if (currentUser.userId) {
+                localStorage.setItem('gb_current_user', JSON.stringify(currentUser));
+                localStorage.setItem('gb_tickets_' + currentUser.userId, JSON.stringify(subscribedTickets));
+            }
             localStorage.setItem('gb_artists', JSON.stringify(artists));
-            localStorage.setItem('gb_tickets_' + currentUser.userId, JSON.stringify(subscribedTickets));
             localStorage.setItem('gb_registered_users', JSON.stringify(registeredUsers));
             localStorage.setItem('gb_bubble_requests', JSON.stringify(bubbleRequests));
             localStorage.setItem('gb_user_notifications', JSON.stringify(userNotifications));
@@ -758,12 +758,11 @@
                 }, 600);
             }, 1500);
 
-            // Firestore 실시간 메시지 리스너 연동 (messages 컬렉션)
             initFirestoreRealtimeChat();
         });
 
         function initAppUI() {
-            if (isSignedUp) {
+            if (isSignedUp && currentUser.userId) {
                 document.getElementById('displayNickname').innerText = currentUser.nickname;
                 document.getElementById('displayId').innerText = '@' + currentUser.userId;
                 document.getElementById('authButtonGroup').style.display = 'none';
@@ -778,7 +777,7 @@
             recalculateNotiCount();
         }
 
-        function switchTab(tabIndex) {
+        window.switchTab = function(tabIndex) {
             const buttons = document.querySelectorAll('.nav-btn');
             buttons.forEach((btn, idx) => {
                 if (idx + 1 === tabIndex) btn.classList.add('active');
@@ -840,7 +839,7 @@
         }
 
         function openArtistDetail(artist) {
-            if (!isSignedUp) {
+            if (!isSignedUp || !currentUser.userId) {
                 showToast("회원가입을 먼저 해주세요!");
                 switchTab(3);
                 openSignupModal();
@@ -878,12 +877,18 @@
             }
         }
 
-        function closeArtistDetail() {
+        window.closeArtistDetail = function() {
             document.getElementById('artistDetailView').style.display = 'none';
             document.getElementById('artistListView').style.display = 'block';
         }
 
-        function buyTicket(artistId) {
+        window.buyTicket = function(artistId) {
+            if (!isSignedUp || !currentUser.userId) {
+                showToast("회원가입을 먼저 해주세요!");
+                switchTab(3);
+                openSignupModal();
+                return;
+            }
             if (!subscribedTickets.includes(artistId)) {
                 subscribedTickets.push(artistId);
                 saveData();
@@ -893,7 +898,7 @@
             openArtistDetail(artist);
         }
 
-        function cancelTicket(artistId) {
+        window.cancelTicket = function(artistId) {
             subscribedTickets = subscribedTickets.filter(id => id !== artistId);
             saveData();
             showToast("방울권이 취소되었습니다.");
@@ -901,7 +906,7 @@
             renderChatList();
         }
 
-        function goToChatFromDetail(artistId) {
+        window.goToChatFromDetail = function(artistId) {
             closeArtistDetail();
             switchTab(2);
             openChatRoom(artistId);
@@ -910,6 +915,15 @@
         function renderChatList() {
             const container = document.getElementById('chatListContainer');
             
+            if (!isSignedUp || !currentUser.userId) {
+                container.innerHTML = `
+                    <div style="text-align: center; padding: 40px 20px; color: #78909C; grid-column: span 2;">
+                        회원가입 후 이용 가능합니다! 💧
+                    </div>
+                `;
+                return;
+            }
+
             let activeChatIds = [...subscribedTickets];
             const myArtist = artists.find(a => a.linkedUserId === currentUser.userId);
             if (myArtist && !activeChatIds.includes(myArtist.id)) {
@@ -951,18 +965,16 @@
             document.getElementById('chatRoomView').style.display = 'flex';
             document.getElementById('chatRoomTitle').innerText = `💬 ${artist.name}와의 버블 채팅`;
 
-            renderMessages([]);
+            renderMessages(currentMessagesCache);
         }
 
-        function closeChatRoom() {
+        window.closeChatRoom = function() {
             currentChatArtistId = null;
             document.getElementById('chatRoomView').style.display = 'none';
             document.getElementById('chatListView').style.display = 'block';
             renderChatList();
         }
 
-        // Firestore 실시간 데이터 연동 및 렌더링
-        let currentMessagesCache = [];
         function initFirestoreRealtimeChat() {
             const q = query(collection(db, "messages"), orderBy("timestamp", "asc"));
             onSnapshot(q, (snapshot) => {
@@ -983,7 +995,6 @@
             const targetArtist = artists.find(a => a.id === currentChatArtistId);
             const isIAtmArtist = (targetArtist && targetArtist.linkedUserId === currentUser.userId);
 
-            // 현재 채팅방 아티스트에 해당하는 메시지만 필터링
             const roomMessages = messages.filter(m => m.artistId === currentChatArtistId);
 
             roomMessages.forEach(msg => {
@@ -1015,7 +1026,7 @@
                         bubble.className = 'msg-bubble white-right';
                         bubble.innerText = msg.text;
                     } else {
-                        return; // 다른 유저의 일반 메시지는 숨김
+                        return;
                     }
                 }
 
@@ -1040,6 +1051,11 @@
             const input = document.getElementById('chatInput');
             const text = input.value.trim();
             if (!text || !currentChatArtistId) return;
+
+            if (!isSignedUp || !currentUser.userId) {
+                showToast("회원가입 후 이용해주세요!");
+                return;
+            }
 
             const targetArtist = artists.find(a => a.id === currentChatArtistId);
             const isIAtmArtist = (targetArtist && targetArtist.linkedUserId === currentUser.userId);
@@ -1119,6 +1135,7 @@
             registeredUsers.push({ userId: uid, nickname: nick });
             currentUser = { nickname: nick, userId: uid };
             isSignedUp = true;
+            subscribedTickets = JSON.parse(localStorage.getItem('gb_tickets_' + currentUser.userId)) || [];
 
             saveData();
             closeModal('signupModal');
@@ -1133,7 +1150,7 @@
         }
 
         window.openLoginModal = function() {
-            if (!isSignedUp && registeredUsers.length === 0) {
+            if (registeredUsers.length === 0) {
                 showToast("가입된 계정이 없습니다. 먼저 회원가입을 해주세요!");
                 openSignupModal();
                 return;
@@ -1161,6 +1178,7 @@
         function selectAccountToLogin(userObj) {
             currentUser = userObj;
             isSignedUp = true;
+            subscribedTickets = JSON.parse(localStorage.getItem('gb_tickets_' + currentUser.userId)) || [];
             saveData();
             closeModal('loginModal');
             showToast(`${currentUser.nickname}님 환영합니다!`);
@@ -1448,7 +1466,9 @@
             registeredUsers = registeredUsers.filter(u => u.userId !== targetUid);
             bubbleRequests = bubbleRequests.filter(r => r.userId !== targetUid);
             delete userNotifications[targetUid];
-            localStorage.removeItem('gb_tickets_' + targetUid);
+            if (targetUid) {
+                localStorage.removeItem('gb_tickets_' + targetUid);
+            }
 
             isSignedUp = false;
             currentUser = { nickname: '', userId: '' };
