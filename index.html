@@ -1,2810 +1,1557 @@
-<script type="module">
-    import { initializeApp } from "https://www.gstatic.com/firebasejs/10.8.0/firebase-app.js";
-
-    import {
-        getFirestore,
-        collection,
-        doc,
-        addDoc,
-        setDoc,
-        getDoc,
-        getDocs,
-        updateDoc,
-        deleteDoc,
-        query,
-        orderBy,
-        where,
-        onSnapshot,
-        serverTimestamp
-    } from "https://www.gstatic.com/firebasejs/10.8.0/firebase-firestore.js";
-
-
-    // =========================================================
-    // Firebase
-    // =========================================================
-
-    const firebaseConfig = {
-        apiKey: "AIzaSyAZWuBetWOeffq13ho126kUkbR0qDNnWis",
-        authDomain: "bubble-5267e.firebaseapp.com",
-        projectId: "bubble-5267e",
-        storageBucket: "bubble-5267e.firebasestorage.app",
-        messagingSenderId: "381706100941",
-        appId: "1:381706100941:web:8e32cc424083823048c984",
-        measurementId: "G-XZTW9X5JQM"
-    };
-
-    const app = initializeApp(firebaseConfig);
-    const db = getFirestore(app);
-
-
-    // =========================================================
-    // 기본 변수
-    // =========================================================
-
-    let currentUser = JSON.parse(localStorage.getItem("gb_current_user")) || {
-        nickname: "",
-        userId: ""
-    };
-
-    let isSignedUp = !!currentUser.userId;
-
-    let artists = [];
-    let registeredUsers = [];
-    let bubbleRequests = [];
-    let subscribedTickets = [];
-    let userNotifications = [];
-
-    let unreadNotiCount = 0;
-
-    let currentChatArtistId = null;
-    let replyingToMsg = null;
-    let currentMessagesCache = [];
-
-    let unsubscribeUsers = null;
-    let unsubscribeArtists = null;
-    let unsubscribeRequests = null;
-    let unsubscribeTickets = null;
-    let unsubscribeNotifications = null;
-    let unsubscribeMessages = null;
-
-
-    // =========================================================
-    // 기본 아티스트
-    // =========================================================
-
-    const defaultArtist = {
-        id: "artist_default",
-        linkedUserId: "gpepsl",
-        name: "혜린",
-        avatar: "💧",
-        desc: "광버블 아티스트"
-    };
-
-
-    // =========================================================
-    // 초기 실행
-    // =========================================================
-
-    window.addEventListener("DOMContentLoaded", async () => {
-
-        // 기본 아티스트가 Firebase에 없으면 생성
-        await createDefaultArtist();
-
-        // 전체 데이터 실시간 연결
-        startGlobalListeners();
-
-        // 현재 로그인 유저 연결
-        if (isSignedUp) {
-            await startUserListeners();
+<!DOCTYPE html>
+<html lang="ko">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
+    <title>광버블 (Bubble)</title>
+    <style>
+        * {
+            box-sizing: border-box;
+            margin: 0;
+            padding: 0;
+            font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, Helvetica, Arial, sans-serif;
         }
 
-        setTimeout(() => {
-
-            const splash = document.getElementById("splashScreen");
-
-            splash.style.opacity = "0";
-
-            setTimeout(() => {
-
-                splash.style.display = "none";
-
-                const isStandalone =
-                    window.matchMedia("(display-mode: standalone)").matches ||
-                    window.navigator.standalone;
-
-                if (isStandalone) {
-
-                    document.getElementById("appMainContainer").style.display = "flex";
-                    document.getElementById("bottomNavBar").style.display = "flex";
-
-                    initAppUI();
-
-                } else {
-
-                    document.getElementById("safariGuideContainer").style.display = "flex";
-
-                }
-
-            }, 600);
-
-        }, 1500);
-    });
-
-
-    // =========================================================
-    // 기본 아티스트 생성
-    // =========================================================
-
-    async function createDefaultArtist() {
-
-        try {
-
-            const ref = doc(db, "artists", defaultArtist.id);
-            const snap = await getDoc(ref);
-
-            if (!snap.exists()) {
-                await setDoc(ref, defaultArtist);
-            }
-
-        } catch (error) {
-            console.error("기본 아티스트 생성 오류:", error);
-        }
-    }
-
-
-    // =========================================================
-    // 전체 Firebase 실시간 연결
-    // =========================================================
-
-    function startGlobalListeners() {
-
-        // -----------------------------
-        // 회원 목록
-        // -----------------------------
-
-        if (unsubscribeUsers) unsubscribeUsers();
-
-        unsubscribeUsers = onSnapshot(
-            collection(db, "users"),
-            snapshot => {
-
-                registeredUsers = [];
-
-                snapshot.forEach(docSnap => {
-
-                    registeredUsers.push({
-                        id: docSnap.id,
-                        ...docSnap.data()
-                    });
-
-                });
-
-                if (isSignedUp) {
-                    updateUserInfoUI();
-                }
-
-            },
-            error => {
-                console.error("회원 목록 오류:", error);
-            }
-        );
-
-
-        // -----------------------------
-        // 아티스트 목록
-        // -----------------------------
-
-        if (unsubscribeArtists) unsubscribeArtists();
-
-        unsubscribeArtists = onSnapshot(
-            collection(db, "artists"),
-            snapshot => {
-
-                artists = [];
-
-                snapshot.forEach(docSnap => {
-
-                    artists.push({
-                        id: docSnap.id,
-                        ...docSnap.data()
-                    });
-
-                });
-
-                // 기본 아티스트가 없으면 추가
-                if (artists.length === 0) {
-                    setDoc(
-                        doc(db, "artists", defaultArtist.id),
-                        defaultArtist
-                    );
-                }
-
-                renderArtistList();
-                renderChatList();
-                renderMypageMenu();
-                recalculateNotiCount();
-
-            },
-            error => {
-                console.error("아티스트 목록 오류:", error);
-            }
-        );
-
-
-        // -----------------------------
-        // 물방울 신청 목록
-        // -----------------------------
-
-        if (unsubscribeRequests) unsubscribeRequests();
-
-        unsubscribeRequests = onSnapshot(
-            collection(db, "bubbleRequests"),
-            snapshot => {
-
-                bubbleRequests = [];
-
-                snapshot.forEach(docSnap => {
-
-                    bubbleRequests.push({
-                        id: docSnap.id,
-                        ...docSnap.data()
-                    });
-
-                });
-
-                recalculateNotiCount();
-
-            },
-            error => {
-                console.error("신청 목록 오류:", error);
-            }
-        );
-
-
-        // -----------------------------
-        // 채팅 메시지
-        // -----------------------------
-
-        if (unsubscribeMessages) unsubscribeMessages();
-
-        const messageQuery = query(
-            collection(db, "messages"),
-            orderBy("timestamp", "asc")
-        );
-
-        unsubscribeMessages = onSnapshot(
-            messageQuery,
-            snapshot => {
-
-                currentMessagesCache = [];
-
-                snapshot.forEach(docSnap => {
-
-                    currentMessagesCache.push({
-                        id: docSnap.id,
-                        ...docSnap.data()
-                    });
-
-                });
-
-                if (currentChatArtistId) {
-                    renderMessages(currentMessagesCache);
-                }
-
-            },
-            error => {
-
-                console.error("채팅 실시간 연결 오류:", error);
-
-                if (error.code === "permission-denied") {
-                    showToast("Firestore 권한을 확인해주세요.");
-                }
-
-            }
-        );
-    }
-
-
-    // =========================================================
-    // 현재 유저 데이터 실시간 연결
-    // =========================================================
-
-    async function startUserListeners() {
-
-        stopUserListeners();
-
-        if (!currentUser.userId) return;
-
-        // -----------------------------
-        // 방울권
-        // -----------------------------
-
-        const ticketQuery = query(
-            collection(db, "tickets"),
-            where("userId", "==", currentUser.userId)
-        );
-
-        unsubscribeTickets = onSnapshot(
-            ticketQuery,
-            snapshot => {
-
-                subscribedTickets = [];
-
-                snapshot.forEach(docSnap => {
-
-                    const data = docSnap.data();
-
-                    if (data.artistId) {
-                        subscribedTickets.push(data.artistId);
-                    }
-
-                });
-
-                renderChatList();
-                recalculateNotiCount();
-
-            },
-            error => {
-                console.error("방울권 오류:", error);
-            }
-        );
-
-
-        // -----------------------------
-        // 알림
-        // -----------------------------
-
-        const notiQuery = query(
-            collection(
-                db,
-                "users",
-                currentUser.userId,
-                "notifications"
-            ),
-            orderBy("createdAt", "asc")
-        );
-
-        unsubscribeNotifications = onSnapshot(
-            notiQuery,
-            snapshot => {
-
-                userNotifications = [];
-
-                snapshot.forEach(docSnap => {
-
-                    userNotifications.push({
-                        id: docSnap.id,
-                        ...docSnap.data()
-                    });
-
-                });
-
-                recalculateNotiCount();
-
-            },
-            error => {
-                console.error("알림 오류:", error);
-            }
-        );
-    }
-
-
-    function stopUserListeners() {
-
-        if (unsubscribeTickets) {
-            unsubscribeTickets();
-            unsubscribeTickets = null;
+        body {
+            background-color: #F7F9FC;
+            color: #333;
+            display: flex;
+            flex-direction: column;
+            height: 100vh;
+            overflow: hidden;
         }
 
-        if (unsubscribeNotifications) {
-            unsubscribeNotifications();
-            unsubscribeNotifications = null;
+        /* 스플래시 화면 */
+        #splashScreen {
+            position: fixed;
+            top: 0;
+            left: 0;
+            width: 100%;
+            height: 100%;
+            background: #0288D1;
+            color: white;
+            display: flex;
+            flex-direction: column;
+            justify-content: center;
+            align-items: center;
+            z-index: 9999;
+            transition: opacity 0.6s ease;
         }
-    }
-
-
-    // =========================================================
-    // UI 초기화
-    // =========================================================
-
-    function initAppUI() {
-
-        if (isSignedUp && currentUser.userId) {
-
-            updateUserInfoUI();
-
-            document.getElementById("authButtonGroup").style.display = "none";
-
-            renderMypageMenu();
-
-        } else {
-
-            document.getElementById("displayNickname").innerText = "비눗방울";
-            document.getElementById("displayId").innerText = "@guest_bubble";
-
-            document.getElementById("authButtonGroup").style.display = "flex";
-
-            document.getElementById("mypageMenuList").style.display = "none";
+        #splashScreen h1 {
+            font-size: 2rem;
+            margin-bottom: 10px;
         }
 
-        renderArtistList();
-        renderChatList();
-        recalculateNotiCount();
-    }
-
-
-    function updateUserInfoUI() {
-
-        if (!currentUser.userId) return;
-
-        document.getElementById("displayNickname").innerText =
-            currentUser.nickname;
-
-        document.getElementById("displayId").innerText =
-            "@" + currentUser.userId;
-
-        document.getElementById("authButtonGroup").style.display = "none";
-    }
-
-
-    // =========================================================
-    // 탭
-    // =========================================================
-
-    window.switchTab = function(tabIndex) {
-
-        const buttons = document.querySelectorAll(".nav-btn");
-
-        buttons.forEach((btn, idx) => {
-
-            if (idx + 1 === tabIndex) {
-                btn.classList.add("active");
-            } else {
-                btn.classList.remove("active");
-            }
-
-        });
-
-        for (let i = 1; i <= 3; i++) {
-            document
-                .getElementById(`tab${i}`)
-                .classList.remove("active");
+        /* 사파리 안내 화면 */
+        #safariGuideContainer {
+            position: fixed;
+            top: 0;
+            left: 0;
+            width: 100%;
+            height: 100%;
+            background: white;
+            display: none;
+            flex-direction: column;
+            justify-content: center;
+            align-items: center;
+            padding: 20px;
+            text-align: center;
+            z-index: 8888;
         }
 
-        document
-            .getElementById(`tab${tabIndex}`)
-            .classList.add("active");
-
-
-        if (tabIndex === 2) {
-            closeChatRoom();
-            renderChatList();
-        }
-    };
-
-
-    // =========================================================
-    // 알림
-    // =========================================================
-
-    function updateNotiBadge() {
-
-        const badge = document.getElementById("notiBadge");
-
-        if (!currentUser.userId || unreadNotiCount <= 0) {
-
-            badge.style.display = "none";
-
-        } else {
-
-            badge.innerText = unreadNotiCount;
-            badge.style.display = "block";
-
-        }
-    }
-
-
-    function recalculateNotiCount() {
-
-        if (!currentUser.userId) {
-
-            unreadNotiCount = 0;
-            updateNotiBadge();
-            return;
-
+        /* 메인 컨테이너 */
+        #appMainContainer {
+            display: none;
+            flex-direction: column;
+            flex: 1;
+            overflow: hidden;
+            max-width: 600px;
+            width: 100%;
+            margin: 0 auto;
+            background: white;
+            box-shadow: 0 0 10px rgba(0,0,0,0.05);
         }
 
-        let count = userNotifications.length;
-
-        const isMyArtist =
-            currentUser.userId === "gpepsl" ||
-            artists.some(
-                a => a.linkedUserId === currentUser.userId
-            );
-
-        if (isMyArtist) {
-
-            count += bubbleRequests.filter(
-                r => r.status === "pending"
-            ).length;
-
+        /* 탭 내용 영역 */
+        .tab-content {
+            display: none;
+            flex: 1;
+            overflow-y: auto;
+            flex-direction: column;
+        }
+        .tab-content.active {
+            display: flex;
         }
 
-        unreadNotiCount = count;
+        /* 하단 네비게이션 */
+        #bottomNavBar {
+            display: none;
+            height: 60px;
+            background: white;
+            border-top: 1px solid #eee;
+            justify-content: space-around;
+            align-items: center;
+            max-width: 600px;
+            width: 100%;
+            margin: 0 auto;
+        }
+        .nav-btn {
+            background: none;
+            border: none;
+            font-size: 0.9rem;
+            color: #888;
+            cursor: pointer;
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            gap: 4px;
+            position: relative;
+        }
+        .nav-btn.active {
+            color: #0288D1;
+            font-weight: bold;
+        }
 
-        updateNotiBadge();
-    }
+        /* 알림 뱃지 */
+        #notiBadge {
+            position: absolute;
+            top: -5px;
+            right: -10px;
+            background: #FF4081;
+            color: white;
+            font-size: 0.7rem;
+            padding: 2px 6px;
+            border-radius: 10px;
+            display: none;
+        }
 
+        /* 공통 컴포넌트 & 스타일 */
+        .view-header {
+            padding: 16px;
+            font-size: 1.2rem;
+            font-weight: bold;
+            border-bottom: 1px solid #eee;
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            background: white;
+        }
 
-    // =========================================================
-    // 아티스트 목록
-    // =========================================================
+        .artist-item {
+            display: flex;
+            align-items: center;
+            padding: 14px 16px;
+            border-bottom: 1px solid #f1f1f1;
+            cursor: pointer;
+            gap: 12px;
+        }
+        .profile-img {
+            width: 48px;
+            height: 48px;
+            border-radius: 50%;
+            background: #E1F5FE;
+            display: flex;
+            justify-content: center;
+            align-items: center;
+            font-size: 1.5rem;
+        }
+        .artist-info {
+            display: flex;
+            flex-direction: column;
+            gap: 4px;
+        }
+        .artist-name {
+            font-weight: bold;
+            font-size: 1rem;
+        }
+        .artist-status {
+            font-size: 0.85rem;
+            color: #78909C;
+        }
 
-    function renderArtistList() {
+        /* 채팅 스타일 */
+        #chatMessages {
+            flex: 1;
+            padding: 16px;
+            overflow-y: auto;
+            display: flex;
+            flex-direction: column;
+            gap: 10px;
+            background: #EBF5FB;
+        }
+        .msg-bubble {
+            max-width: 75%;
+            padding: 10px 14px;
+            border-radius: 14px;
+            font-size: 0.95rem;
+            line-height: 1.4;
+            word-break: break-all;
+        }
+        .artist-sky {
+            background: white;
+            align-self: flex-start;
+            border-top-left-radius: 2px;
+        }
+        .artist-sky-right {
+            background: #E1F5FE;
+            align-self: flex-end;
+            border-top-right-radius: 2px;
+        }
+        .white-left {
+            background: white;
+            align-self: flex-start;
+            border-top-left-radius: 2px;
+        }
+        .white-right {
+            background: #0288D1;
+            color: white;
+            align-self: flex-end;
+            border-top-right-radius: 2px;
+        }
+        .reply-box {
+            background: #FFF9C4;
+            align-self: flex-start;
+            border-left: 4px solid #FBC02D;
+        }
+        .reply-target-tag {
+            font-size: 0.75rem;
+            color: #F57F17;
+            font-weight: bold;
+            margin-bottom: 4px;
+        }
 
-        const container =
-            document.getElementById("artistListContainer");
+        /* 모달 공통 */
+        .modal-overlay {
+            position: fixed;
+            top: 0;
+            left: 0;
+            width: 100%;
+            height: 100%;
+            background: rgba(0,0,0,0.4);
+            display: none;
+            justify-content: center;
+            align-items: center;
+            z-index: 1000;
+        }
+        .modal-box {
+            background: white;
+            width: 90%;
+            max-width: 400px;
+            border-radius: 16px;
+            padding: 20px;
+            display: flex;
+            flex-direction: column;
+            gap: 16px;
+            max-height: 80vh;
+            overflow-y: auto;
+        }
+        .modal-title {
+            font-size: 1.1rem;
+            font-weight: bold;
+        }
+        .modal-input {
+            width: 100%;
+            padding: 10px 12px;
+            border: 1px solid #ddd;
+            border-radius: 8px;
+            font-size: 1rem;
+            outline: none;
+        }
+        .modal-input:focus {
+            border-color: #0288D1;
+        }
+        .modal-btn-group {
+            display: flex;
+            gap: 8px;
+            justify-content: flex-end;
+        }
+        .primary-btn {
+            background: #0288D1;
+            color: white;
+            border: none;
+            padding: 10px 16px;
+            border-radius: 8px;
+            font-weight: bold;
+            cursor: pointer;
+        }
+        .secondary-btn {
+            background: #eee;
+            color: #333;
+            border: none;
+            padding: 10px 16px;
+            border-radius: 8px;
+            cursor: pointer;
+        }
 
-        if (!container) return;
+        /* 토스트 팝업 */
+        #toastPopup {
+            position: fixed;
+            bottom: 80px;
+            left: 50%;
+            transform: translateX(-50%) translateY(20px);
+            background: rgba(0, 0, 0, 0.8);
+            color: white;
+            padding: 10px 20px;
+            border-radius: 20px;
+            font-size: 0.9rem;
+            opacity: 0;
+            pointer-events: none;
+            transition: all 0.3s ease;
+            z-index: 9999;
+        }
+        #toastPopup.show {
+            opacity: 1;
+            transform: translateX(-50%) translateY(0);
+        }
 
-        container.innerHTML = "";
+        /* 마이페이지 메뉴 스타일 */
+        .menu-btn {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            padding: 14px 16px;
+            background: #F7F9FC;
+            border: none;
+            border-radius: 12px;
+            font-size: 1rem;
+            cursor: pointer;
+            text-align: left;
+            width: 100%;
+        }
+    </style>
+</head>
+<body>
 
-        artists.forEach(artist => {
+    <!-- 스플래시 화면 -->
+    <div id="splashScreen">
+        <h1>💧 광버블</h1>
+        <p>Connecting with Artist...</p>
+    </div>
 
-            const item = document.createElement("div");
+    <!-- 사파리/브라우저 안내 (PWA가 아닐 때) -->
+    <div id="safariGuideContainer">
+        <h2>💧 광버블 앱 실행 안내</h2>
+        <p style="margin-top: 10px; color: #666; line-height: 1.5;">
+            원활한 앱 이용을 위해 홈 화면에 추가하거나<br>전체 화면 모드로 접속해주세요!
+        </p>
+        <button class="primary-btn" style="margin-top: 20px;" onclick="document.getElementById('safariGuideContainer').style.display='none'; document.getElementById('appMainContainer').style.display='flex'; document.getElementById('bottomNavBar').style.display='flex'; initAppUI();">
+            웹으로 계속 이용하기
+        </button>
+    </div>
 
-            item.className = "artist-item";
+    <!-- 앱 메인 컨테이너 -->
+    <div id="appMainContainer">
+        
+        <!-- Tab 1: 아티스트 목록 및 상세 -->
+        <div id="tab1" class="tab-content active">
+            <div id="artistListView">
+                <div class="view-header">💧 아티스트 목록</div>
+                <div id="artistListContainer"></div>
+            </div>
 
-            item.onclick = () => openArtistDetail(artist);
-
-            item.innerHTML = `
-                <div class="profile-img">${artist.avatar || "💧"}</div>
-
-                <div class="artist-info">
-
-                    <span class="artist-name">
-                        ${escapeHTML(artist.name)}
-                    </span>
-
-                    <span class="artist-status">
-                        ${escapeHTML(artist.desc || "광버블 아티스트")}
-                    </span>
-
+            <!-- 아티스트 상세 뷰 -->
+            <div id="artistDetailView" style="display:none; flex-direction:column; flex:1;">
+                <div class="view-header">
+                    <button onclick="closeArtistDetail()" style="background:none; border:none; font-size:1rem; cursor:pointer;">‹ 뒤로</button>
+                    <span>아티스트 정보</span>
+                    <span></span>
                 </div>
-            `;
+                <div style="display:flex; flex-direction:column; align-items:center; padding:40px 20px; gap:16px;">
+                    <div id="detailAvatar" style="font-size: 4rem; width:80px; height:80px; background:#E1F5FE; border-radius:50%; display:flex; justify-content:center; align-items:center;">💧</div>
+                    <h2 id="detailName">아티스트 이름</h2>
+                    <div id="subscribeActionArea" style="width:100%; display:flex; flex-direction:column; align-items:center; margin-top:20px;"></div>
+                </div>
+            </div>
+        </div>
 
-            container.appendChild(item);
-        });
-    }
+        <!-- Tab 2: 채팅 목록 및 채팅방 -->
+        <div id="tab2" class="tab-content">
+            <div id="chatListView" style="display:flex; flex-direction:column; flex:1;">
+                <div class="view-header">💬 버블 채팅 목록</div>
+                <div id="chatListContainer"></div>
+            </div>
 
-
-    // =========================================================
-    // 아티스트 상세
-    // =========================================================
-
-    function openArtistDetail(artist) {
-
-        if (!isSignedUp || !currentUser.userId) {
-
-            showToast("회원가입을 먼저 해주세요!");
-
-            switchTab(3);
-            openSignupModal();
-
-            return;
-        }
-
-        document.getElementById("artistListView").style.display = "none";
-
-        document.getElementById("artistDetailView").style.display = "flex";
-
-        document.getElementById("detailAvatar").innerText =
-            artist.avatar || "💧";
-
-        document.getElementById("detailName").innerText =
-            artist.name;
-
-
-        const actionArea =
-            document.getElementById("subscribeActionArea");
-
-        const isSelfArtist =
-            artist.linkedUserId === currentUser.userId;
-
-
-        if (isSelfArtist) {
-
-            actionArea.innerHTML = `
-                <div class="subscribed-tag">
-                    ✨ 본인 아티스트 계정입니다
+            <!-- 채팅방 뷰 -->
+            <div id="chatRoomView" style="display:none; flex-direction:column; flex:1;">
+                <div class="view-header">
+                    <button onclick="closeChatRoom()" style="background:none; border:none; font-size:1rem; cursor:pointer;">‹ 목록</button>
+                    <span id="chatRoomTitle">채팅방</span>
+                    <span></span>
                 </div>
 
-                <button
-                    class="subscribe-btn"
-                    style="margin-top:10px;"
-                    onclick="goToChatFromDetail('${artist.id}')">
-                    내 버블 방 이동
+                <!-- 답장 배너 -->
+                <div id="replyingBanner" style="display:none; background:#FFFDE7; padding:8px 16px; justify-content:space-between; align-items:center; border-bottom:1px solid #FFF59D;">
+                    <span id="replyingText" style="font-size:0.85rem; color:#F57F17;">답장 중...</span>
+                    <button onclick="cancelReply()" style="background:none; border:none; color:#F57F17; font-weight:bold; cursor:pointer;">✕</button>
+                </div>
+
+                <div id="chatMessages"></div>
+
+                <!-- 메시지 입력창 -->
+                <div style="padding:10px; background:white; border-top:1px solid #eee; display:flex; gap:8px;">
+                    <input type="text" id="chatInput" class="modal-input" placeholder="메시지를 입력하세요..." onkeypress="if(event.key==='Enter') sendChatMessage()">
+                    <button class="primary-btn" onclick="sendChatMessage()">전송</button>
+                </div>
+            </div>
+        </div>
+
+        <!-- Tab 3: 마이페이지 -->
+        <div id="tab3" class="tab-content">
+            <div class="view-header" style="justify-content: space-between;">
+                <span>👤 마이페이지</span>
+                <button onclick="openNotificationModal()" class="primary-btn" style="position:relative; padding:6px 12px; font-size:0.85rem;">
+                    알림
+                    <span id="notiBadge">0</span>
                 </button>
-            `;
-
-            return;
-        }
-
-
-        const isSubbed =
-            subscribedTickets.includes(artist.id);
-
-
-        if (isSubbed) {
-
-            actionArea.innerHTML = `
-                <div class="subscribed-tag">
-                    이미 끊은 방울권입니다! ✨
-                </div>
-
-                <button
-                    class="subscribe-btn"
-                    style="margin-top:10px;"
-                    onclick="goToChatFromDetail('${artist.id}')">
-                    채팅으로 이동
-                </button>
-            `;
-
-        } else {
-
-            actionArea.innerHTML = `
-                <button
-                    class="subscribe-btn"
-                    onclick="buyTicket('${artist.id}')">
-                    방울권 끊기
-                </button>
-            `;
-        }
-    }
-
-
-    window.closeArtistDetail = function() {
-
-        document.getElementById("artistDetailView").style.display = "none";
-
-        document.getElementById("artistListView").style.display = "block";
-    };
-
-
-    // =========================================================
-    // 방울권
-    // =========================================================
-
-    window.buyTicket = async function(artistId) {
-
-        if (!isSignedUp || !currentUser.userId) {
-
-            showToast("회원가입을 먼저 해주세요!");
-
-            switchTab(3);
-            openSignupModal();
-
-            return;
-        }
-
-
-        if (subscribedTickets.includes(artistId)) {
-
-            showToast("이미 끊은 방울권입니다.");
-
-            return;
-        }
-
-
-        try {
-
-            await setDoc(
-                doc(
-                    db,
-                    "tickets",
-                    `${currentUser.userId}_${artistId}`
-                ),
-                {
-                    userId: currentUser.userId,
-                    artistId: artistId,
-                    createdAt: serverTimestamp()
-                }
-            );
-
-            showToast("방울권 끊기 성공!");
-
-            const artist =
-                artists.find(a => a.id === artistId);
-
-            if (artist) {
-                openArtistDetail(artist);
-            }
-
-        } catch (error) {
-
-            console.error(error);
-            showToast("방울권 저장에 실패했습니다.");
-
-        }
-    };
-
-
-    window.cancelTicket = async function(artistId) {
-
-        try {
-
-            await deleteDoc(
-                doc(
-                    db,
-                    "tickets",
-                    `${currentUser.userId}_${artistId}`
-                )
-            );
-
-            showToast("방울권이 취소되었습니다.");
-
-            openMyTicketsModal();
-
-        } catch (error) {
-
-            console.error(error);
-            showToast("방울권 취소에 실패했습니다.");
-
-        }
-    };
-
-
-    // =========================================================
-    // 채팅 목록
-    // =========================================================
-
-    function renderChatList() {
-
-        const container =
-            document.getElementById("chatListContainer");
-
-        if (!container) return;
-
-
-        if (!isSignedUp || !currentUser.userId) {
-
-            container.innerHTML = `
-                <div style="
-                    text-align:center;
-                    padding:40px 20px;
-                    color:#78909C;
-                    grid-column:span 2;">
-                    회원가입 후 이용 가능합니다! 💧
-                </div>
-            `;
-
-            return;
-        }
-
-
-        let activeChatIds = [...subscribedTickets];
-
-
-        const myArtist =
-            artists.find(
-                a => a.linkedUserId === currentUser.userId
-            );
-
-
-        if (
-            myArtist &&
-            !activeChatIds.includes(myArtist.id)
-        ) {
-
-            activeChatIds.unshift(myArtist.id);
-        }
-
-
-        if (activeChatIds.length === 0) {
-
-            container.innerHTML = `
-                <div style="
-                    text-align:center;
-                    padding:40px 20px;
-                    color:#78909C;
-                    grid-column:span 2;">
-
-                    구독 중인 물방울이 없습니다.<br>
-                    먼저 방울권을 끊어주세요! 💧
-
-                </div>
-            `;
-
-            return;
-        }
-
-
-        container.innerHTML = "";
-
-
-        activeChatIds.forEach(id => {
-
-            const artist =
-                artists.find(a => a.id === id);
-
-            if (!artist) return;
-
-
-            const item =
-                document.createElement("div");
-
-            item.className = "artist-item";
-
-            item.onclick = () =>
-                openChatRoom(id);
-
-
-            item.innerHTML = `
-                <div class="profile-img">
-                    ${artist.avatar || "💧"}
-                </div>
-
-                <div class="artist-info">
-
-                    <span class="artist-name">
-                        ${escapeHTML(artist.name)}
-                    </span>
-
-                    <span
-                        class="artist-status"
-                        style="color:#444;">
-                        실시간 채팅방 💬
-                    </span>
-
-                </div>
-            `;
-
-            container.appendChild(item);
-
-        });
-    }
-
-
-    window.goToChatFromDetail = function(artistId) {
-
-        closeArtistDetail();
-
-        switchTab(2);
-
-        openChatRoom(artistId);
-    };
-
-
-    function openChatRoom(artistId) {
-
-        currentChatArtistId = artistId;
-
-        const artist =
-            artists.find(a => a.id === artistId);
-
-        if (!artist) return;
-
-
-        document.getElementById("chatListView").style.display =
-            "none";
-
-        document.getElementById("chatRoomView").style.display =
-            "flex";
-
-
-        document.getElementById("chatRoomTitle").innerText =
-            `💬 ${artist.name}와의 버블 채팅`;
-
-
-        renderMessages(currentMessagesCache);
-    }
-
-
-    window.closeChatRoom = function() {
-
-        currentChatArtistId = null;
-
-        document.getElementById("chatRoomView").style.display =
-            "none";
-
-        document.getElementById("chatListView").style.display =
-            "block";
-
-        renderChatList();
-    };
-
-
-    // =========================================================
-    // 채팅 메시지 출력
-    // =========================================================
-
-    function renderMessages(messages) {
-
-        const container =
-            document.getElementById("chatMessages");
-
-        if (!container) return;
-
-
-        container.innerHTML = "";
-
-
-        const targetArtist =
-            artists.find(a => a.id === currentChatArtistId);
-
-
-        const isMyArtist =
-            targetArtist &&
-            targetArtist.linkedUserId === currentUser.userId;
-
-
-        const roomMessages =
-            messages.filter(
-                m => m.artistId === currentChatArtistId
-            );
-
-
-        roomMessages.forEach(msg => {
-
-            const bubble =
-                document.createElement("div");
-
-
-            // 아티스트가 보고 있는 화면
-            if (isMyArtist) {
-
-                if (msg.isArtistSender) {
-
-                    bubble.className =
-                        "msg-bubble artist-sky-right";
-
-                    bubble.innerText =
-                        msg.text;
-
-                } else if (msg.isReply) {
-
-                    bubble.className =
-                        "msg-bubble reply-box";
-
-                    bubble.innerHTML = `
-                        <div class="reply-target-tag">
-                            ↳ [답장] ${escapeHTML(msg.fanNickname || "")}님에게:
-                        </div>
-
-                        ${escapeHTML(msg.text)}
-                    `;
-
-                } else {
-
-                    bubble.className =
-                        "msg-bubble white-left";
-
-                    bubble.innerHTML = `
-                        <div style="
-                            font-size:0.75rem;
-                            color:#0288D1;
-                            font-weight:bold;">
-                            ${escapeHTML(msg.fanNickname || "사용자")}
-                            (@${escapeHTML(msg.fanUserId || "")})
-                        </div>
-
-                        <div>
-                            ${escapeHTML(msg.text)}
-                        </div>
-
-                        <button
-                            onclick="window.startReply('${msg.id}', '${escapeAttribute(msg.fanNickname || "")}')"
-                            style="
-                                margin-top:6px;
-                                background:#0288D1;
-                                color:white;
-                                border:none;
-                                padding:4px 8px;
-                                border-radius:6px;
-                                font-size:0.75rem;
-                                cursor:pointer;">
-                            답장하기
-                        </button>
-                    `;
-                }
-
-
-            // 일반 팬 화면
-            } else {
-
-                if (msg.isArtistSender) {
-
-                    bubble.className =
-                        "msg-bubble artist-sky";
-
-                    bubble.innerText =
-                        msg.text;
-
-                } else if (msg.isReply) {
-
-                    bubble.className =
-                        "msg-bubble reply-box";
-
-                    bubble.innerHTML = `
-                        <div class="reply-target-tag">
-                            ↳ 아티스트의 답장
-                        </div>
-
-                        ${escapeHTML(msg.text)}
-                    `;
-
-                } else if (
-                    msg.userId === currentUser.userId
-                ) {
-
-                    bubble.className =
-                        "msg-bubble white-right";
-
-                    bubble.innerText =
-                        msg.text;
-
-                } else {
-
-                    return;
-                }
-            }
-
-
-            container.appendChild(bubble);
-
-        });
-
-
-        container.scrollTop =
-            container.scrollHeight;
-    }
-
-
-    // =========================================================
-    // 답장
-    // =========================================================
-
-    window.startReply = function(msgId, fanNick) {
-
-        replyingToMsg = msgId;
-
-        const banner =
-            document.getElementById("replyingBanner");
-
-        banner.style.display = "flex";
-
-        document.getElementById("replyingText").innerText =
-            `${fanNick}님의 메시지에 답장 중...`;
-    };
-
-
-    window.cancelReply = function() {
-
-        replyingToMsg = null;
-
-        document.getElementById(
-            "replyingBanner"
-        ).style.display = "none";
-    };
-
-
-    // =========================================================
-    // 메시지 보내기
-    // =========================================================
-
-    window.sendChatMessage = async function() {
-
-        const input =
-            document.getElementById("chatInput");
-
-        const text =
-            input.value.trim();
-
-
-        if (!text || !currentChatArtistId) {
-            return;
-        }
-
-
-        if (!isSignedUp || !currentUser.userId) {
-
-            showToast("회원가입 후 이용해주세요!");
-
-            return;
-        }
-
-
-        const targetArtist =
-            artists.find(
-                a => a.id === currentChatArtistId
-            );
-
-
-        if (!targetArtist) {
-
-            showToast("아티스트 정보를 찾을 수 없습니다.");
-
-            return;
-        }
-
-
-        const isMyArtist =
-            targetArtist.linkedUserId === currentUser.userId;
-
-
-        input.value = "";
-
-
-        try {
-
-            // 아티스트 답장
-            if (isMyArtist && replyingToMsg) {
-
-                await addDoc(
-                    collection(db, "messages"),
-                    {
-                        artistId: currentChatArtistId,
-                        sender: targetArtist.name,
-                        text: text,
-
-                        isArtistSender: false,
-                        isReply: true,
-
-                        replyToId: replyingToMsg,
-
-                        userId: currentUser.userId,
-
-                        fanNickname: "",
-                        fanUserId: "",
-
-                        timestamp: serverTimestamp()
-                    }
-                );
-
-                cancelReply();
-
-
-            // 아티스트가 먼저 보내는 메시지
-            } else if (isMyArtist) {
-
-                await addDoc(
-                    collection(db, "messages"),
-                    {
-                        artistId: currentChatArtistId,
-
-                        sender: targetArtist.name,
-                        text: text,
-
-                        isArtistSender: true,
-                        isReply: false,
-
-                        userId: currentUser.userId,
-
-                        timestamp: serverTimestamp()
-                    }
-                );
-
-
-            // 일반 유저 메시지
-            } else {
-
-                await addDoc(
-                    collection(db, "messages"),
-                    {
-                        artistId: currentChatArtistId,
-
-                        sender: currentUser.nickname,
-
-                        fanNickname: currentUser.nickname,
-                        fanUserId: currentUser.userId,
-
-                        text: text,
-
-                        isArtistSender: false,
-                        isReply: false,
-
-                        userId: currentUser.userId,
-
-                        timestamp: serverTimestamp()
-                    }
-                );
-            }
-
-
-        } catch (error) {
-
-            console.error(
-                "메시지 전송 오류:",
-                error
-            );
-
-            console.error(
-                "오류 코드:",
-                error.code
-            );
-
-            showToast(
-                "메시지 전송 실패: " +
-                (error.code || "unknown")
-            );
-        }
-    };
-
-
-    // =========================================================
-    // 회원가입
-    // =========================================================
-
-    function validateUserId(userId) {
-
-        // 영문 + 숫자 + _ 만 허용
-        return /^[A-Za-z0-9_]+$/.test(userId);
-    }
-
-
-    window.openSignupModal = function() {
-
-        document.getElementById(
-            "inputNickname"
-        ).value = "";
-
-        document.getElementById(
-            "inputUserId"
-        ).value = "";
-
-        openModal("signupModal");
-    };
-
-
-    window.processSignup = async function() {
-
-        const nick =
-            document
-                .getElementById("inputNickname")
-                .value
-                .trim();
-
-        const uid =
-            document
-                .getElementById("inputUserId")
-                .value
-                .trim();
-
-
-        if (!nick || !uid) {
-
-            showToast(
-                "닉네임과 아이디를 모두 입력해주세요!"
-            );
-
-            return;
-        }
-
-
-        if (!validateUserId(uid)) {
-
-            showToast(
-                "아이디는 영문, 숫자, _만 사용할 수 있습니다."
-            );
-
-            return;
-        }
-
-
-        try {
-
-            const userRef =
-                doc(db, "users", uid);
-
-            const userSnap =
-                await getDoc(userRef);
-
-
-            if (userSnap.exists()) {
-
-                showToast(
-                    "이미 존재하는 아이디입니다."
-                );
-
-                return;
-            }
-
-
-            await setDoc(
-                userRef,
-                {
-                    userId: uid,
-                    nickname: nick,
-                    createdAt: serverTimestamp()
-                }
-            );
-
-
-            currentUser = {
-                nickname: nick,
-                userId: uid
-            };
-
-            isSignedUp = true;
-
-
-            localStorage.setItem(
-                "gb_current_user",
-                JSON.stringify(currentUser)
-            );
-
-
-            await startUserListeners();
-
-
-            closeModal("signupModal");
-
-            showToast("회원가입 완료!");
-
-
-            initAppUI();
-
-        } catch (error) {
-
-            console.error(
-                "회원가입 오류:",
-                error
-            );
-
-            showToast(
-                "회원가입에 실패했습니다."
-            );
-        }
-    };
-
-
-    // =========================================================
-    // 로그인
-    // =========================================================
-
-    window.openLoginModal = async function() {
-
-        try {
-
-            const snapshot =
-                await getDocs(
-                    collection(db, "users")
-                );
-
-
-            if (snapshot.empty) {
-
-                showToast(
-                    "가입된 계정이 없습니다."
-                );
-
-                openSignupModal();
-
-                return;
-            }
-
-
-            const container =
-                document.getElementById(
-                    "savedAccountList"
-                );
-
-            container.innerHTML = "";
-
-
-            snapshot.forEach(docSnap => {
-
-                const u = docSnap.data();
-
-
-                const item =
-                    document.createElement("div");
-
-
-                item.style.cssText = `
-                    padding:12px;
-                    border:1px solid #B3E5FC;
-                    border-radius:12px;
-                    background:#F1F8FE;
-                    display:flex;
-                    justify-content:space-between;
-                    align-items:center;
-                    cursor:pointer;
-                `;
-
-
-                item.innerHTML = `
+            </div>
+
+            <div style="padding:20px; display:flex; flex-direction:column; gap:20px; flex:1; overflow-y:auto;">
+                <!-- 프로필 카드 -->
+                <div style="background:#F1F8FE; padding:20px; border-radius:16px; display:flex; align-items:center; gap:16px;">
+                    <div style="font-size:2.5rem;">💧</div>
                     <div>
-                        <strong>
-                            ${escapeHTML(u.nickname)}
-                        </strong>
-
-                        <span style="
-                            font-size:0.85rem;
-                            color:#666;">
-                            @${escapeHTML(u.userId)}
-                        </span>
+                        <div id="displayNickname" style="font-size:1.2rem; font-weight:bold;">비눗방울</div>
+                        <div id="displayId" style="font-size:0.9rem; color:#666; margin-top:2px;">@guest_bubble</div>
                     </div>
+                </div>
 
-                    <button style="
-                        background:#0288D1;
-                        color:white;
-                        border:none;
-                        padding:6px 12px;
-                        border-radius:8px;">
-                        선택
-                    </button>
-                `;
+                <!-- 비회원용 버튼 그룹 -->
+                <div id="authButtonGroup" style="display:flex; gap:10px;">
+                    <button class="secondary-btn" style="flex:1;" onclick="openLoginModal()">로그인</button>
+                    <button class="primary-btn" style="flex:1;" onclick="openSignupModal()">회원가입</button>
+                </div>
 
+                <!-- 마이페이지 메뉴 리스트 -->
+                <div id="mypageMenuList" style="display:none; flex-direction:column; gap:10px;"></div>
+            </div>
+        </div>
 
-                item.onclick = () =>
-                    selectAccountToLogin(u);
+        <!-- 하단 네비게이션 바 -->
+        <div id="bottomNavBar">
+            <button class="nav-btn active" onclick="switchTab(1)">
+                <span>💧</span>
+                <span>아티스트</span>
+            </button>
+            <button class="nav-btn" onclick="switchTab(2)">
+                <span>💬</span>
+                <span>채팅</span>
+            </button>
+            <button class="nav-btn" onclick="switchTab(3)">
+                <span>👤</span>
+                <span>마이페이지</span>
+            </button>
+        </div>
 
+    </div>
 
-                container.appendChild(item);
+    <!-- ================= MODALS ================= -->
 
-            });
+    <!-- 회원가입 모달 -->
+    <div id="signupModal" class="modal-overlay">
+        <div class="modal-box">
+            <div class="modal-title">회원가입</div>
+            <input type="text" id="inputNickname" class="modal-input" placeholder="사용할 닉네임 입력">
+            <input type="text" id="inputUserId" class="modal-input" placeholder="아이디 (영문, 숫자, _)">
+            <div class="modal-btn-group">
+                <button class="secondary-btn" onclick="closeModal('signupModal')">취소</button>
+                <button class="primary-btn" onclick="processSignup()">가입하기</button>
+            </div>
+        </div>
+    </div>
 
+    <!-- 로그인 모달 -->
+    <div id="loginModal" class="modal-overlay">
+        <div class="modal-box">
+            <div class="modal-title">계정 선택</div>
+            <div id="savedAccountList" style="display:flex; flex-direction:column; gap:8px;"></div>
+            <div class="modal-btn-group" style="justify-content: space-between; align-items:center;">
+                <button style="background:none; border:none; color:#0288D1; cursor:pointer;" onclick="switchToSignupFromLogin()">계정이 없으신가요?</button>
+                <button class="secondary-btn" onclick="closeModal('loginModal')">닫기</button>
+            </div>
+        </div>
+    </div>
 
-            openModal("loginModal");
+    <!-- 프로필 수정 모달 -->
+    <div id="editProfileModal" class="modal-overlay">
+        <div class="modal-box">
+            <div class="modal-title">정보 변경</div>
+            <input type="text" id="editNickname" class="modal-input" placeholder="닉네임">
+            <input type="text" id="editUserId" class="modal-input" placeholder="아이디">
+            <div id="artistNameEditSection" style="display:none; flex-direction:column; gap:6px;">
+                <span style="font-size:0.85rem; color:#666;">아티스트 활동명</span>
+                <input type="text" id="editArtistName" class="modal-input" placeholder="아티스트명">
+            </div>
+            <div class="modal-btn-group">
+                <button class="secondary-btn" onclick="closeModal('editProfileModal')">취소</button>
+                <button class="primary-btn" onclick="saveProfileChanges()">저장</button>
+            </div>
+        </div>
+    </div>
 
+    <!-- 방울권 목록 모달 -->
+    <div id="ticketListModal" class="modal-overlay">
+        <div class="modal-box">
+            <div class="modal-title">🎟 방울권 목록</div>
+            <div id="myTicketList"></div>
+            <div class="modal-btn-group">
+                <button class="secondary-btn" onclick="closeModal('ticketListModal')">닫기</button>
+            </div>
+        </div>
+    </div>
 
-        } catch (error) {
+    <!-- 알림 모달 -->
+    <div id="notiModal" class="modal-overlay">
+        <div class="modal-box">
+            <div class="modal-title">🔔 알림함</div>
+            <div id="notiList" style="display:flex; flex-direction:column; gap:8px;"></div>
+            <div class="modal-btn-group">
+                <button class="secondary-btn" onclick="closeModal('notiModal')">닫기</button>
+            </div>
+        </div>
+    </div>
 
-            console.error(error);
+    <!-- 아티스트 이름 설정 모달 -->
+    <div id="setArtistNameModal" class="modal-overlay">
+        <div class="modal-box">
+            <div class="modal-title">✨ 아티스트 활동 이름 정하기</div>
+            <input type="text" id="inputNewArtistName" class="modal-input" placeholder="사용할 아티스트 이름">
+            <div class="modal-btn-group">
+                <button class="secondary-btn" onclick="closeModal('setArtistNameModal')">취소</button>
+                <button class="primary-btn" onclick="confirmArtistName()">등록하기</button>
+            </div>
+        </div>
+    </div>
 
-            showToast(
-                "회원 목록을 불러오지 못했습니다."
-            );
-        }
-    };
+    <!-- 유저 목록 모달 (관리자용) -->
+    <div id="userListModal" class="modal-overlay">
+        <div class="modal-box">
+            <div class="modal-title">👥 가입 유저 목록</div>
+            <div id="registeredUserList" style="max-height:300px; overflow-y:auto;"></div>
+            <div class="modal-btn-group">
+                <button class="secondary-btn" onclick="closeModal('userListModal')">닫기</button>
+            </div>
+        </div>
+    </div>
 
+    <!-- 로그아웃/탈퇴 확인 모달 -->
+    <div id="logoutModal" class="modal-overlay">
+        <div class="modal-box">
+            <div class="modal-title">계정 관리</div>
+            <div style="display:flex; flex-direction:column; gap:10px;">
+                <button class="secondary-btn" onclick="processLogout()">로그아웃</button>
+                <button class="primary-btn" style="background:#FF4081;" onclick="processDeleteAccount()">회원 탈퇴</button>
+            </div>
+            <div class="modal-btn-group">
+                <button class="secondary-btn" onclick="closeModal('logoutModal')">닫기</button>
+            </div>
+        </div>
+    </div>
 
-    window.switchToSignupFromLogin = function() {
+    <!-- 토스트 팝업 -->
+    <div id="toastPopup"></div>
 
-        closeModal("loginModal");
+    <!-- 제공해주신 Firebase JS 및 비즈니스 로직 스크립트 삽입 -->
+    <script type="module">
+        import { initializeApp } from "https://www.gstatic.com/firebasejs/10.8.0/firebase-app.js";
+        import {
+            getFirestore, collection, doc, addDoc, setDoc, getDoc, getDocs, updateDoc, deleteDoc, query, orderBy, where, onSnapshot, serverTimestamp
+        } from "https://www.gstatic.com/firebasejs/10.8.0/firebase-firestore.js";
 
-        openSignupModal();
-    };
-
-
-    async function selectAccountToLogin(userObj) {
-
-        currentUser = {
-            nickname: userObj.nickname,
-            userId: userObj.userId
+        // =========================================================
+        // Firebase
+        // =========================================================
+        const firebaseConfig = {
+            apiKey: "AIzaSyAZWuBetWOeffq13ho126kUkbR0qDNnWis",
+            authDomain: "bubble-5267e.firebaseapp.com",
+            projectId: "bubble-5267e",
+            storageBucket: "bubble-5267e.firebasestorage.app",
+            messagingSenderId: "381706100941",
+            appId: "1:381706100941:web:8e32cc424083823048c984",
+            measurementId: "G-XZTW9X5JQM"
         };
 
-        isSignedUp = true;
-
-
-        localStorage.setItem(
-            "gb_current_user",
-            JSON.stringify(currentUser)
-        );
-
-
-        await startUserListeners();
-
-
-        closeModal("loginModal");
-
-        showToast(
-            `${currentUser.nickname}님 환영합니다!`
-        );
-
-
-        initAppUI();
-    }
-
-
-    // =========================================================
-    // 마이페이지
-    // =========================================================
-
-    function renderMypageMenu() {
-
-        const menuList =
-            document.getElementById(
-                "mypageMenuList"
-            );
-
-        if (!menuList) return;
-
-
-        if (!isSignedUp) {
-
-            menuList.style.display = "none";
-
-            return;
-        }
-
-
-        menuList.style.display = "flex";
-
-        menuList.innerHTML = "";
-
-
-        const isFirstArtist =
-            currentUser.userId === "gpepsl";
-
-
-        const hasMyArtist =
-            artists.some(
-                a => a.linkedUserId === currentUser.userId
-            );
-
-
-        const profileEditTitle =
-            isFirstArtist || hasMyArtist
-                ? "✏️ 정보 변경 (닉네임/아이디/아티스트명)"
-                : "✏️ 정보 변경 (닉네임/아이디)";
-
-
-        const buttons = [
-
-            {
-                title: profileEditTitle,
-                action: () => openEditProfileModal()
-            },
-
-            {
-                title: "🎟 방울권 목록",
-                action: () => openMyTicketsModal()
-            },
-
-            {
-                title: "💧 물방울 신청하기",
-                action: () => requestBubble()
-            },
-
-            {
-                title: "🚪 로그아웃 / 회원 탈퇴",
-                action: () => openModal("logoutModal")
-            }
-
-        ];
-
-
-        if (isFirstArtist || hasMyArtist) {
-
-            buttons.splice(
-                3,
-                0,
-                {
-                    title:
-                        "👥 회원가입 유저 목록 (관리자)",
-
-                    action:
-                        () => openUserListModal()
-                }
-            );
-        }
-
-
-        buttons.forEach(btn => {
-
-            const b =
-                document.createElement("button");
-
-            b.className = "menu-btn";
-
-            b.onclick = btn.action;
-
-            b.innerHTML = `
-                <span>${btn.title}</span>
-                <span>›</span>
-            `;
-
-            menuList.appendChild(b);
-        });
-    }
-
-
-    // =========================================================
-    // 프로필 수정
-    // =========================================================
-
-    window.openEditProfileModal = function() {
-
-        document.getElementById(
-            "editNickname"
-        ).value = currentUser.nickname;
-
-        document.getElementById(
-            "editUserId"
-        ).value = currentUser.userId;
-
-
-        const myArtist =
-            artists.find(
-                a => a.linkedUserId === currentUser.userId
-            );
-
-
-        const artistEditSec =
-            document.getElementById(
-                "artistNameEditSection"
-            );
-
-
-        if (myArtist) {
-
-            artistEditSec.style.display = "flex";
-
-            document.getElementById(
-                "editArtistName"
-            ).value = myArtist.name;
-
-        } else {
-
-            artistEditSec.style.display = "none";
-        }
-
-
-        openModal("editProfileModal");
-    };
-
-
-    window.saveProfileChanges = async function() {
-
-        const newNick =
-            document
-                .getElementById("editNickname")
-                .value
-                .trim();
-
-
-        const newUid =
-            document
-                .getElementById("editUserId")
-                .value
-                .trim();
-
-
-        const newArtistName =
-            document
-                .getElementById("editArtistName")
-                .value
-                .trim();
-
-
-        if (!newNick || !newUid) {
-
-            showToast(
-                "모든 항목을 입력해주세요."
-            );
-
-            return;
-        }
-
-
-        if (!validateUserId(newUid)) {
-
-            showToast(
-                "아이디는 영문, 숫자, _만 사용할 수 있습니다."
-            );
-
-            return;
-        }
-
-
-        const oldUid =
-            currentUser.userId;
-
-
-        try {
-
-            // 아이디가 변경되지 않은 경우
-            if (oldUid === newUid) {
-
-                await updateDoc(
-                    doc(db, "users", oldUid),
-                    {
-                        nickname: newNick
-                    }
-                );
-
-
-            } else {
-
-                const newUserRef =
-                    doc(db, "users", newUid);
-
-                const newUserSnap =
-                    await getDoc(newUserRef);
-
-
-                if (newUserSnap.exists()) {
-
-                    showToast(
-                        "이미 사용 중인 아이디입니다."
-                    );
-
-                    return;
-                }
-
-
-                // 새 계정 생성
-                await setDoc(
-                    newUserRef,
-                    {
-                        userId: newUid,
-                        nickname: newNick,
-                        createdAt: serverTimestamp()
-                    }
-                );
-
-
-                // 기존 아티스트 연결 변경
-                const artistSnapshot =
-                    await getDocs(
-                        query(
-                            collection(db, "artists"),
-                            where(
-                                "linkedUserId",
-                                "==",
-                                oldUid
-                            )
-                        )
-                    );
-
-
-                for (const artistDoc of artistSnapshot.docs) {
-
-                    await updateDoc(
-                        artistDoc.ref,
-                        {
-                            linkedUserId: newUid,
-
-                            ...(newArtistName
-                                ? { name: newArtistName }
-                                : {})
-                        }
-                    );
-                }
-
-
-                // 기존 회원 삭제
-                await deleteDoc(
-                    doc(db, "users", oldUid)
-                );
-            }
-
-
-            // 아티스트 이름만 변경
-            if (oldUid === newUid && newArtistName) {
-
-                const artistSnapshot =
-                    await getDocs(
-                        query(
-                            collection(db, "artists"),
-                            where(
-                                "linkedUserId",
-                                "==",
-                                oldUid
-                            )
-                        )
-                    );
-
-
-                for (const artistDoc of artistSnapshot.docs) {
-
-                    await updateDoc(
-                        artistDoc.ref,
-                        {
-                            name: newArtistName
-                        }
-                    );
-                }
-            }
-
-
-            currentUser = {
-                nickname: newNick,
-                userId: newUid
-            };
-
-
-            isSignedUp = true;
-
-
-            localStorage.setItem(
-                "gb_current_user",
-                JSON.stringify(currentUser)
-            );
-
-
-            closeModal("editProfileModal");
-
-            showToast(
-                "정보가 성공적으로 수정되었습니다."
-            );
-
-
-            updateUserInfoUI();
-
-            renderArtistList();
-
-            renderMypageMenu();
-
-
-        } catch (error) {
-
-            console.error(
-                "프로필 수정 오류:",
-                error
-            );
-
-            showToast(
-                "정보 수정에 실패했습니다."
-            );
-        }
-    };
-
-
-    // =========================================================
-    // 방울권 목록
-    // =========================================================
-
-    window.openMyTicketsModal = function() {
-
-        const container =
-            document.getElementById(
-                "myTicketList"
-            );
-
-
-        container.innerHTML = "";
-
-
-        const filteredTickets =
-            subscribedTickets.filter(id => {
-
-                const artist =
-                    artists.find(
-                        a => a.id === id
-                    );
-
-                return !(
-                    artist &&
-                    artist.linkedUserId === currentUser.userId
-                );
-            });
-
-
-        if (filteredTickets.length === 0) {
-
-            container.innerHTML = `
-                <div style="
-                    text-align:center;
-                    color:#888;
-                    padding:20px;">
-                    구독 중인 방울권이 없습니다.
-                </div>
-            `;
-
-        } else {
-
-            filteredTickets.forEach(id => {
-
-                const artist =
-                    artists.find(
-                        a => a.id === id
-                    );
-
-                if (!artist) return;
-
-
-                const item =
-                    document.createElement("div");
-
-
-                item.style.cssText = `
-                    display:flex;
-                    justify-content:space-between;
-                    align-items:center;
-                    padding:10px;
-                    border-bottom:1px solid #eee;
-                `;
-
-
-                item.innerHTML = `
-                    <div style="
-                        display:flex;
-                        align-items:center;
-                        gap:8px;">
-                        <span>
-                            ${artist.avatar || "💧"}
-                        </span>
-
-                        <strong>
-                            ${escapeHTML(artist.name)}
-                        </strong>
-                    </div>
-
-                    <button
-                        onclick="cancelTicket('${artist.id}')"
-                        style="
-                            background:#FF4081;
-                            color:white;
-                            border:none;
-                            padding:6px 12px;
-                            border-radius:10px;">
-                        방울권 끊기
-                    </button>
-                `;
-
-
-                container.appendChild(item);
-            });
-        }
-
-
-        openModal("ticketListModal");
-    };
-
-
-    // =========================================================
-    // 물방울 신청
-    // =========================================================
-
-    window.requestBubble = async function() {
-
-        if (!currentUser.userId) {
-
-            showToast(
-                "회원가입 후 이용해주세요."
-            );
-
-            return;
-        }
-
-
-        if (
-            currentUser.userId === "gpepsl" ||
-            artists.some(
-                a =>
-                    a.linkedUserId ===
-                    currentUser.userId
-            )
-        ) {
-
-            showToast(
-                "이미 아티스트이므로 물방울 신청이 불가능합니다."
-            );
-
-            return;
-        }
-
-
-        const existing =
-            bubbleRequests.find(
-                r =>
-                    r.userId ===
-                    currentUser.userId &&
-                    r.status === "pending"
-            );
-
-
-        if (existing) {
-
-            showToast(
-                "이미 신청하였습니다."
-            );
-
-            return;
-        }
-
-
-        try {
-
-            await setDoc(
-                doc(
-                    db,
-                    "bubbleRequests",
-                    currentUser.userId
-                ),
-                {
-                    userId: currentUser.userId,
-                    nickname: currentUser.nickname,
-                    status: "pending",
-                    createdAt: serverTimestamp()
-                }
-            );
-
-
-            showToast(
-                "물방울 신청을 완료했습니다."
-            );
-
-        } catch (error) {
-
-            console.error(error);
-
-            showToast(
-                "신청에 실패했습니다."
-            );
-        }
-    };
-
-
-    // =========================================================
-    // 알림
-    // =========================================================
-
-    window.openNotificationModal = function() {
-
-        const container =
-            document.getElementById(
-                "notiList"
-            );
-
-
-        container.innerHTML = "";
-
-
-        const isArtist =
-            currentUser.userId === "gpepsl" ||
-            artists.some(
-                a =>
-                    a.linkedUserId ===
-                    currentUser.userId
-            );
-
-
-        if (isArtist) {
-
-            const pending =
-                bubbleRequests.filter(
-                    r => r.status === "pending"
-                );
-
-
-            if (pending.length === 0) {
-
-                container.innerHTML = `
-                    <div style="
-                        text-align:center;
-                        color:#888;
-                        padding:20px;">
-                        새로운 신청 알림이 없습니다.
-                    </div>
-                `;
-
-            } else {
-
-                pending.forEach(req => {
-
-                    const item =
-                        document.createElement("div");
-
-
-                    item.style.cssText = `
-                        background:#F1F8FE;
-                        padding:12px;
-                        border-radius:12px;
-                        display:flex;
-                        justify-content:space-between;
-                        align-items:center;
-                    `;
-
-
-                    item.innerHTML = `
-                        <div>
-                            <strong>
-                                ${escapeHTML(req.nickname)}
-                            </strong>
-
-                            (@${escapeHTML(req.userId)})
-
-                            <br>
-
-                            <span style="
-                                font-size:0.85rem;
-                                color:#666;">
-                                물방울 신청 도착
-                            </span>
-                        </div>
-
-                        <button
-                            onclick="approveBubble('${req.userId}')"
-                            style="
-                                background:#0288D1;
-                                color:white;
-                                border:none;
-                                padding:8px 14px;
-                                border-radius:10px;">
-                            승낙
-                        </button>
-                    `;
-
-
-                    container.appendChild(item);
-
-                });
-            }
-
-
-        } else {
-
-            if (userNotifications.length === 0) {
-
-                container.innerHTML = `
-                    <div style="
-                        text-align:center;
-                        color:#888;
-                        padding:20px;">
-                        받은 알림이 없습니다.
-                    </div>
-                `;
-
-            } else {
-
-                userNotifications.forEach(noti => {
-
-                    const item =
-                        document.createElement("div");
-
-
-                    item.style.cssText = `
-                        background:#F1F8FE;
-                        padding:12px;
-                        border-radius:12px;
-                        display:flex;
-                        flex-direction:column;
-                        gap:8px;
-                    `;
-
-
-                    item.innerHTML = `
-                        <div>
-                            ${escapeHTML(noti.msg)}
-                        </div>
-
-                        ${
-                            noti.type === "approved"
-                                ? `
-                                    <button
-                                        onclick="openSetArtistNameModal('${noti.id}')"
-                                        style="
-                                            background:#0288D1;
-                                            color:white;
-                                            border:none;
-                                            padding:8px;
-                                            border-radius:10px;">
-                                        활동 이름 정하기
-                                    </button>
-                                  `
-                                : ""
-                        }
-                    `;
-
-
-                    container.appendChild(item);
-
-                });
-            }
-        }
-
-
-        unreadNotiCount = 0;
-
-        updateNotiBadge();
-
-        openModal("notiModal");
-    };
-
-
-    // =========================================================
-    // 물방울 신청 승인
-    // =========================================================
-
-    window.approveBubble = async function(applicantUserId) {
-
-        try {
-
-            const requestRef =
-                doc(
-                    db,
-                    "bubbleRequests",
-                    applicantUserId
-                );
-
-
-            const requestSnap =
-                await getDoc(requestRef);
-
-
-            if (!requestSnap.exists()) {
-
-                showToast(
-                    "신청 정보를 찾을 수 없습니다."
-                );
-
-                return;
-            }
-
-
-            const req =
-                requestSnap.data();
-
-
-            await updateDoc(
-                requestRef,
-                {
-                    status: "approved"
-                }
-            );
-
-
-            await addDoc(
-                collection(
-                    db,
-                    "users",
-                    applicantUserId,
-                    "notifications"
-                ),
-                {
-                    type: "approved",
-
-                    msg:
-                        "🎉 물방울 신청이 승낙되었습니다! 사용할 이름을 정해보세요.",
-
-                    createdAt:
-                        serverTimestamp()
-                }
-            );
-
-
-            showToast(
-                "물방울 신청을 승낙했습니다!"
-            );
-
-
-            closeModal("notiModal");
-
-
-        } catch (error) {
-
-            console.error(
-                "승인 오류:",
-                error
-            );
-
-            showToast(
-                "승인에 실패했습니다."
-            );
-        }
-    };
-
-
-    // =========================================================
-    // 아티스트 이름 설정
-    // =========================================================
-
-    window.openSetArtistNameModal = function(notificationId) {
-
-        window.currentNotificationId =
-            notificationId;
-
-        closeModal("notiModal");
-
-        document.getElementById(
-            "inputNewArtistName"
-        ).value = "";
-
-        openModal("setArtistNameModal");
-    };
-
-
-    window.confirmArtistName = async function() {
-
-        const name =
-            document
-                .getElementById("inputNewArtistName")
-                .value
-                .trim();
-
-
-        if (!name) {
-
-            showToast(
-                "이름을 입력해주세요!"
-            );
-
-            return;
-        }
-
-
-        try {
-
-            const newArtistRef =
-                doc(
-                    collection(db, "artists")
-                );
-
-
-            await setDoc(
-                newArtistRef,
-                {
-                    id: newArtistRef.id,
-
-                    linkedUserId:
-                        currentUser.userId,
-
-                    name: name,
-
-                    avatar: "💧",
-
-                    desc: "광버블 아티스트",
-
-                    createdAt:
-                        serverTimestamp()
-                }
-            );
-
-
-            // 해당 승인 알림 삭제
-            if (window.currentNotificationId) {
-
-                await deleteDoc(
-                    doc(
-                        db,
-                        "users",
-                        currentUser.userId,
-                        "notifications",
-                        window.currentNotificationId
-                    )
-                );
-            }
-
-
-            // 승인 신청도 정리
-            const requestRef =
-                doc(
-                    db,
-                    "bubbleRequests",
-                    currentUser.userId
-                );
-
-
-            const requestSnap =
-                await getDoc(requestRef);
-
-
-            if (requestSnap.exists()) {
-
-                await updateDoc(
-                    requestRef,
-                    {
-                        status: "completed"
-                    }
-                );
-            }
-
-
-            closeModal(
-                "setArtistNameModal"
-            );
-
-
-            showToast(
-                "새로운 물방울 아티스트로 등록되었습니다!"
-            );
-
-
-            switchTab(1);
-
-
-        } catch (error) {
-
-            console.error(
-                "아티스트 등록 오류:",
-                error
-            );
-
-            showToast(
-                "아티스트 등록에 실패했습니다."
-            );
-        }
-    };
-
-
-    // =========================================================
-    // 가입 유저 목록
-    // =========================================================
-
-    window.openUserListModal = async function() {
-
-        const container =
-            document.getElementById(
-                "registeredUserList"
-            );
-
-
-        container.innerHTML = "";
-
-
-        try {
-
-            const snapshot =
-                await getDocs(
-                    collection(db, "users")
-                );
-
-
-            if (snapshot.empty) {
-
-                container.innerHTML = `
-                    <div style="
-                        text-align:center;
-                        color:#888;
-                        padding:20px;">
-                        가입한 유저가 없습니다.
-                    </div>
-                `;
-
-            } else {
-
-                snapshot.forEach(docSnap => {
-
-                    const u =
-                        docSnap.data();
-
-
-                    const item =
-                        document.createElement("div");
-
-
-                    item.style.cssText = `
-                        padding:10px;
-                        border-bottom:1px solid #eee;
-                        display:flex;
-                        justify-content:space-between;
-                    `;
-
-
-                    item.innerHTML = `
-                        <span>
-                            <strong>
-                                ${escapeHTML(u.nickname)}
-                            </strong>
-                        </span>
-
-                        <span style="
-                            color:#78909C;">
-                            @${escapeHTML(u.userId)}
-                        </span>
-                    `;
-
-
-                    container.appendChild(item);
-
-                });
-            }
-
-
-            openModal("userListModal");
-
-
-        } catch (error) {
-
-            console.error(error);
-
-            showToast(
-                "유저 목록을 불러오지 못했습니다."
-            );
-        }
-    };
-
-
-    // =========================================================
-    // 로그아웃
-    // =========================================================
-
-    window.processLogout = async function() {
-
-        if (
-            !confirm(
-                "정말 로그아웃을 하시겠습니까?"
-            )
-        ) return;
-
-
-        stopUserListeners();
-
-
-        isSignedUp = false;
-
-        currentUser = {
+        const app = initializeApp(firebaseConfig);
+        const db = getFirestore(app);
+
+        // =========================================================
+        // 기본 변수
+        // =========================================================
+        let currentUser = JSON.parse(localStorage.getItem("gb_current_user")) || {
             nickname: "",
             userId: ""
         };
 
+        let isSignedUp = !!currentUser.userId;
+        let artists = [];
+        let registeredUsers = [];
+        let bubbleRequests = [];
+        let subscribedTickets = [];
+        let userNotifications = [];
+        let unreadNotiCount = 0;
+        let currentChatArtistId = null;
+        let replyingToMsg = null;
+        let currentMessagesCache = [];
 
-        localStorage.removeItem(
-            "gb_current_user"
-        );
+        let unsubscribeUsers = null;
+        let unsubscribeArtists = null;
+        let unsubscribeRequests = null;
+        let unsubscribeTickets = null;
+        let unsubscribeNotifications = null;
+        let unsubscribeMessages = null;
 
+        const defaultArtist = {
+            id: "artist_default",
+            linkedUserId: "gpepsl",
+            name: "혜린",
+            avatar: "💧",
+            desc: "광버블 아티스트"
+        };
 
-        subscribedTickets = [];
-        userNotifications = [];
+        window.addEventListener("DOMContentLoaded", async () => {
+            await createDefaultArtist();
+            startGlobalListeners();
 
-
-        closeModal("logoutModal");
-
-        showToast(
-            "로그아웃 되었습니다."
-        );
-
-
-        resetToInitialState();
-    };
-
-
-    // =========================================================
-    // 회원 탈퇴
-    // =========================================================
-
-    window.processDeleteAccount = async function() {
-
-        if (
-            !confirm(
-                "정말 회원탈퇴를 하시겠습니까?"
-            )
-        ) return;
-
-
-        const targetUid =
-            currentUser.userId;
-
-
-        try {
-
-            // -----------------------------
-            // 아티스트 삭제
-            // -----------------------------
-
-            const artistSnapshot =
-                await getDocs(
-                    query(
-                        collection(db, "artists"),
-                        where(
-                            "linkedUserId",
-                            "==",
-                            targetUid
-                        )
-                    )
-                );
-
-
-            for (const artistDoc of artistSnapshot.docs) {
-
-                await deleteDoc(
-                    artistDoc.ref
-                );
+            if (isSignedUp) {
+                await startUserListeners();
             }
 
+            setTimeout(() => {
+                const splash = document.getElementById("splashScreen");
+                splash.style.opacity = "0";
+                setTimeout(() => {
+                    splash.style.display = "none";
+                    const isStandalone = window.matchMedia("(display-mode: standalone)").matches || window.navigator.standalone;
 
-            // -----------------------------
-            // 방울권 삭제
-            // -----------------------------
+                    if (isStandalone) {
+                        document.getElementById("appMainContainer").style.display = "flex";
+                        document.getElementById("bottomNavBar").style.display = "flex";
+                        initAppUI();
+                    } else {
+                        // 데스크탑/일반 브라우저 접속 시에도 편하게 바로 실행되도록 가이드 오픈 대신 메인 활성화 가능
+                        document.getElementById("appMainContainer").style.display = "flex";
+                        document.getElementById("bottomNavBar").style.display = "flex";
+                        initAppUI();
+                    }
+                }, 600);
+            }, 1500);
+        });
 
-            const ticketSnapshot =
-                await getDocs(
-                    query(
-                        collection(db, "tickets"),
-                        where(
-                            "userId",
-                            "==",
-                            targetUid
-                        )
-                    )
-                );
-
-
-            for (const ticketDoc of ticketSnapshot.docs) {
-
-                await deleteDoc(
-                    ticketDoc.ref
-                );
+        async function createDefaultArtist() {
+            try {
+                const ref = doc(db, "artists", defaultArtist.id);
+                const snap = await getDoc(ref);
+                if (!snap.exists()) {
+                    await setDoc(ref, defaultArtist);
+                }
+            } catch (error) {
+                console.error("기본 아티스트 생성 오류:", error);
             }
+        }
 
+        function startGlobalListeners() {
+            if (unsubscribeUsers) unsubscribeUsers();
+            unsubscribeUsers = onSnapshot(collection(db, "users"), snapshot => {
+                registeredUsers = [];
+                snapshot.forEach(docSnap => {
+                    registeredUsers.push({ id: docSnap.id, ...docSnap.data() });
+                });
+                if (isSignedUp) updateUserInfoUI();
+            });
 
-            // -----------------------------
-            // 신청 삭제
-            // -----------------------------
+            if (unsubscribeArtists) unsubscribeArtists();
+            unsubscribeArtists = onSnapshot(collection(db, "artists"), snapshot => {
+                artists = [];
+                snapshot.forEach(docSnap => {
+                    artists.push({ id: docSnap.id, ...docSnap.data() });
+                });
+                if (artists.length === 0) {
+                    setDoc(doc(db, "artists", defaultArtist.id), defaultArtist);
+                }
+                renderArtistList();
+                renderChatList();
+                renderMypageMenu();
+                recalculateNotiCount();
+            });
 
-            await deleteDoc(
-                doc(
-                    db,
-                    "bubbleRequests",
-                    targetUid
-                )
-            ).catch(() => {});
+            if (unsubscribeRequests) unsubscribeRequests();
+            unsubscribeRequests = onSnapshot(collection(db, "bubbleRequests"), snapshot => {
+                bubbleRequests = [];
+                snapshot.forEach(docSnap => {
+                    bubbleRequests.push({ id: docSnap.id, ...docSnap.data() });
+                });
+                recalculateNotiCount();
+            });
 
+            if (unsubscribeMessages) unsubscribeMessages();
+            const messageQuery = query(collection(db, "messages"), orderBy("timestamp", "asc"));
+            unsubscribeMessages = onSnapshot(messageQuery, snapshot => {
+                currentMessagesCache = [];
+                snapshot.forEach(docSnap => {
+                    currentMessagesCache.push({ id: docSnap.id, ...docSnap.data() });
+                });
+                if (currentChatArtistId) {
+                    renderMessages(currentMessagesCache);
+                }
+            }, error => {
+                console.error("채팅 실시간 연결 오류:", error);
+                if (error.code === "permission-denied") {
+                    showToast("Firestore 권한을 확인해주세요.");
+                }
+            });
+        }
 
-            // -----------------------------
-            // 알림 삭제
-            // -----------------------------
-
-            const notiSnapshot =
-                await getDocs(
-                    collection(
-                        db,
-                        "users",
-                        targetUid,
-                        "notifications"
-                    )
-                );
-
-
-            for (
-                const notificationDoc
-                of notiSnapshot.docs
-            ) {
-
-                await deleteDoc(
-                    notificationDoc.ref
-                );
-            }
-
-
-            // -----------------------------
-            // 유저 삭제
-            // -----------------------------
-
-            await deleteDoc(
-                doc(
-                    db,
-                    "users",
-                    targetUid
-                )
-            );
-
-
+        async function startUserListeners() {
             stopUserListeners();
+            if (!currentUser.userId) return;
 
+            const ticketQuery = query(collection(db, "tickets"), where("userId", "==", currentUser.userId));
+            unsubscribeTickets = onSnapshot(ticketQuery, snapshot => {
+                subscribedTickets = [];
+                snapshot.forEach(docSnap => {
+                    const data = docSnap.data();
+                    if (data.artistId) subscribedTickets.push(data.artistId);
+                });
+                renderChatList();
+                recalculateNotiCount();
+            });
 
+            const notiQuery = query(collection(db, "users", currentUser.userId, "notifications"), orderBy("createdAt", "asc"));
+            unsubscribeNotifications = onSnapshot(notiQuery, snapshot => {
+                userNotifications = [];
+                snapshot.forEach(docSnap => {
+                    userNotifications.push({ id: docSnap.id, ...docSnap.data() });
+                });
+                recalculateNotiCount();
+            });
+        }
+
+        function stopUserListeners() {
+            if (unsubscribeTickets) { unsubscribeTickets(); unsubscribeTickets = null; }
+            if (unsubscribeNotifications) { unsubscribeNotifications(); unsubscribeNotifications = null; }
+        }
+
+        function initAppUI() {
+            if (isSignedUp && currentUser.userId) {
+                updateUserInfoUI();
+                document.getElementById("authButtonGroup").style.display = "none";
+                renderMypageMenu();
+            } else {
+                document.getElementById("displayNickname").innerText = "비눗방울";
+                document.getElementById("displayId").innerText = "@guest_bubble";
+                document.getElementById("authButtonGroup").style.display = "flex";
+                document.getElementById("mypageMenuList").style.display = "none";
+            }
+            renderArtistList();
+            renderChatList();
+            recalculateNotiCount();
+        }
+
+        function updateUserInfoUI() {
+            if (!currentUser.userId) return;
+            document.getElementById("displayNickname").innerText = currentUser.nickname;
+            document.getElementById("displayId").innerText = "@" + currentUser.userId;
+            document.getElementById("authButtonGroup").style.display = "none";
+        }
+
+        window.switchTab = function(tabIndex) {
+            const buttons = document.querySelectorAll(".nav-btn");
+            buttons.forEach((btn, idx) => {
+                if (idx + 1 === tabIndex) btn.classList.add("active");
+                else btn.classList.remove("active");
+            });
+
+            for (let i = 1; i <= 3; i++) {
+                document.getElementById(`tab${i}`).classList.remove("active");
+            }
+            document.getElementById(`tab${tabIndex}`).classList.add("active");
+
+            if (tabIndex === 2) {
+                closeChatRoom();
+                renderChatList();
+            }
+        };
+
+        function updateNotiBadge() {
+            const badge = document.getElementById("notiBadge");
+            if (!currentUser.userId || unreadNotiCount <= 0) {
+                badge.style.display = "none";
+            } else {
+                badge.innerText = unreadNotiCount;
+                badge.style.display = "block";
+            }
+        }
+
+        function recalculateNotiCount() {
+            if (!currentUser.userId) {
+                unreadNotiCount = 0;
+                updateNotiBadge();
+                return;
+            }
+            let count = userNotifications.length;
+            const isMyArtist = currentUser.userId === "gpepsl" || artists.some(a => a.linkedUserId === currentUser.userId);
+            if (isMyArtist) {
+                count += bubbleRequests.filter(r => r.status === "pending").length;
+            }
+            unreadNotiCount = count;
+            updateNotiBadge();
+        }
+
+        function renderArtistList() {
+            const container = document.getElementById("artistListContainer");
+            if (!container) return;
+            container.innerHTML = "";
+            artists.forEach(artist => {
+                const item = document.createElement("div");
+                item.className = "artist-item";
+                item.onclick = () => openArtistDetail(artist);
+                item.innerHTML = `
+                    <div class="profile-img">${artist.avatar || "💧"}</div>
+                    <div class="artist-info">
+                        <span class="artist-name">${escapeHTML(artist.name)}</span>
+                        <span class="artist-status">${escapeHTML(artist.desc || "광버블 아티스트")}</span>
+                    </div>
+                `;
+                container.appendChild(item);
+            });
+        }
+
+        function openArtistDetail(artist) {
+            if (!isSignedUp || !currentUser.userId) {
+                showToast("회원가입을 먼저 해주세요!");
+                switchTab(3);
+                openSignupModal();
+                return;
+            }
+            document.getElementById("artistListView").style.display = "none";
+            document.getElementById("artistDetailView").style.display = "flex";
+            document.getElementById("detailAvatar").innerText = artist.avatar || "💧";
+            document.getElementById("detailName").innerText = artist.name;
+
+            const actionArea = document.getElementById("subscribeActionArea");
+            const isSelfArtist = artist.linkedUserId === currentUser.userId;
+
+            if (isSelfArtist) {
+                actionArea.innerHTML = `
+                    <div class="subscribed-tag" style="color:#0288D1; font-weight:bold;">✨ 본인 아티스트 계정입니다</div>
+                    <button class="primary-btn" style="margin-top:10px;" onclick="goToChatFromDetail('${artist.id}')">내 버블 방 이동</button>
+                `;
+                return;
+            }
+
+            const isSubbed = subscribedTickets.includes(artist.id);
+            if (isSubbed) {
+                actionArea.innerHTML = `
+                    <div class="subscribed-tag" style="color:#4CAF50; font-weight:bold;">이미 끊은 방울권입니다! ✨</div>
+                    <button class="primary-btn" style="margin-top:10px;" onclick="goToChatFromDetail('${artist.id}')">채팅으로 이동</button>
+                `;
+            } else {
+                actionArea.innerHTML = `
+                    <button class="primary-btn" onclick="buyTicket('${artist.id}')">방울권 끊기</button>
+                `;
+            }
+        }
+
+        window.closeArtistDetail = function() {
+            document.getElementById("artistDetailView").style.display = "none";
+            document.getElementById("artistListView").style.display = "block";
+        };
+
+        window.buyTicket = async function(artistId) {
+            if (!isSignedUp || !currentUser.userId) {
+                showToast("회원가입을 먼저 해주세요!");
+                switchTab(3);
+                openSignupModal();
+                return;
+            }
+            if (subscribedTickets.includes(artistId)) {
+                showToast("이미 끊은 방울권입니다.");
+                return;
+            }
+            try {
+                await setDoc(doc(db, "tickets", `${currentUser.userId}_${artistId}`), {
+                    userId: currentUser.userId,
+                    artistId: artistId,
+                    createdAt: serverTimestamp()
+                });
+                showToast("방울권 끊기 성공!");
+                const artist = artists.find(a => a.id === artistId);
+                if (artist) openArtistDetail(artist);
+            } catch (error) {
+                console.error(error);
+                showToast("방울권 저장에 실패했습니다.");
+            }
+        };
+
+        window.cancelTicket = async function(artistId) {
+            try {
+                await deleteDoc(doc(db, "tickets", `${currentUser.userId}_${artistId}`));
+                showToast("방울권이 취소되었습니다.");
+                openMyTicketsModal();
+            } catch (error) {
+                console.error(error);
+                showToast("방울권 취소에 실패했습니다.");
+            }
+        };
+
+        function renderChatList() {
+            const container = document.getElementById("chatListContainer");
+            if (!container) return;
+            if (!isSignedUp || !currentUser.userId) {
+                container.innerHTML = `<div style="text-align:center; padding:40px 20px; color:#78909C;">회원가입 후 이용 가능합니다! 💧</div>`;
+                return;
+            }
+
+            let activeChatIds = [...subscribedTickets];
+            const myArtist = artists.find(a => a.linkedUserId === currentUser.userId);
+            if (myArtist && !activeChatIds.includes(myArtist.id)) {
+                activeChatIds.unshift(myArtist.id);
+            }
+
+            if (activeChatIds.length === 0) {
+                container.innerHTML = `<div style="text-align:center; padding:40px 20px; color:#78909C;">구독 중인 물방울이 없습니다.<br>먼저 방울권을 끊어주세요! 💧</div>`;
+                return;
+            }
+
+            container.innerHTML = "";
+            activeChatIds.forEach(id => {
+                const artist = artists.find(a => a.id === id);
+                if (!artist) return;
+                const item = document.createElement("div");
+                item.className = "artist-item";
+                item.onclick = () => openChatRoom(id);
+                item.innerHTML = `
+                    <div class="profile-img">${artist.avatar || "💧"}</div>
+                    <div class="artist-info">
+                        <span class="artist-name">${escapeHTML(artist.name)}</span>
+                        <span class="artist-status" style="color:#444;">실시간 채팅방 💬</span>
+                    </div>
+                `;
+                container.appendChild(item);
+            });
+        }
+
+        window.goToChatFromDetail = function(artistId) {
+            closeArtistDetail();
+            switchTab(2);
+            openChatRoom(artistId);
+        };
+
+        function openChatRoom(artistId) {
+            currentChatArtistId = artistId;
+            const artist = artists.find(a => a.id === artistId);
+            if (!artist) return;
+            document.getElementById("chatListView").style.display = "none";
+            document.getElementById("chatRoomView").style.display = "flex";
+            document.getElementById("chatRoomTitle").innerText = `💬 ${artist.name}와의 버블 채팅`;
+            renderMessages(currentMessagesCache);
+        }
+
+        window.closeChatRoom = function() {
+            currentChatArtistId = null;
+            document.getElementById("chatRoomView").style.display = "none";
+            document.getElementById("chatListView").style.display = "block";
+            renderChatList();
+        };
+
+        function renderMessages(messages) {
+            const container = document.getElementById("chatMessages");
+            if (!container) return;
+            container.innerHTML = "";
+
+            const targetArtist = artists.find(a => a.id === currentChatArtistId);
+            const isMyArtist = targetArtist && targetArtist.linkedUserId === currentUser.userId;
+            const roomMessages = messages.filter(m => m.artistId === currentChatArtistId);
+
+            roomMessages.forEach(msg => {
+                const bubble = document.createElement("div");
+                if (isMyArtist) {
+                    if (msg.isArtistSender) {
+                        bubble.className = "msg-bubble artist-sky-right";
+                        bubble.innerText = msg.text;
+                    } else if (msg.isReply) {
+                        bubble.className = "msg-bubble reply-box";
+                        bubble.innerHTML = `<div class="reply-target-tag">↳ [답장] ${escapeHTML(msg.fanNickname || "")}님에게:</div>${escapeHTML(msg.text)}`;
+                    } else {
+                        bubble.className = "msg-bubble white-left";
+                        bubble.innerHTML = `
+                            <div style="font-size:0.75rem; color:#0288D1; font-weight:bold;">${escapeHTML(msg.fanNickname || "사용자")} (@${escapeHTML(msg.fanUserId || "")})</div>
+                            <div>${escapeHTML(msg.text)}</div>
+                            <button onclick="window.startReply('${msg.id}', '${escapeAttribute(msg.fanNickname || "")}')" style="margin-top:6px; background:#0288D1; color:white; border:none; padding:4px 8px; border-radius:6px; font-size:0.75rem; cursor:pointer;">답장하기</button>
+                        `;
+                    }
+                } else {
+                    if (msg.isArtistSender) {
+                        bubble.className = "msg-bubble artist-sky";
+                        bubble.innerText = msg.text;
+                    } else if (msg.isReply) {
+                        bubble.className = "msg-bubble reply-box";
+                        bubble.innerHTML = `<div class="reply-target-tag">↳ 아티스트의 답장</div>${escapeHTML(msg.text)}`;
+                    } else if (msg.userId === currentUser.userId) {
+                        bubble.className = "msg-bubble white-right";
+                        bubble.innerText = msg.text;
+                    } else {
+                        return;
+                    }
+                }
+                container.appendChild(bubble);
+            });
+            container.scrollTop = container.scrollHeight;
+        }
+
+        window.startReply = function(msgId, fanNick) {
+            replyingToMsg = msgId;
+            const banner = document.getElementById("replyingBanner");
+            banner.style.display = "flex";
+            document.getElementById("replyingText").innerText = `${fanNick}님의 메시지에 답장 중...`;
+        };
+
+        window.cancelReply = function() {
+            replyingToMsg = null;
+            document.getElementById("replyingBanner").style.display = "none";
+        };
+
+        window.sendChatMessage = async function() {
+            const input = document.getElementById("chatInput");
+            const text = input.value.trim();
+            if (!text || !currentChatArtistId) return;
+            if (!isSignedUp || !currentUser.userId) {
+                showToast("회원가입 후 이용해주세요!");
+                return;
+            }
+
+            const targetArtist = artists.find(a => a.id === currentChatArtistId);
+            if (!targetArtist) {
+                showToast("아티스트 정보를 찾을 수 없습니다.");
+                return;
+            }
+
+            const isMyArtist = targetArtist.linkedUserId === currentUser.userId;
+            input.value = "";
+
+            try {
+                if (isMyArtist && replyingToMsg) {
+                    await addDoc(collection(db, "messages"), {
+                        artistId: currentChatArtistId,
+                        sender: targetArtist.name,
+                        text: text,
+                        isArtistSender: false,
+                        isReply: true,
+                        replyToId: replyingToMsg,
+                        userId: currentUser.userId,
+                        fanNickname: "",
+                        fanUserId: "",
+                        timestamp: serverTimestamp()
+                    });
+                    cancelReply();
+                } else if (isMyArtist) {
+                    await addDoc(collection(db, "messages"), {
+                        artistId: currentChatArtistId,
+                        sender: targetArtist.name,
+                        text: text,
+                        isArtistSender: true,
+                        isReply: false,
+                        userId: currentUser.userId,
+                        timestamp: serverTimestamp()
+                    });
+                } else {
+                    await addDoc(collection(db, "messages"), {
+                        artistId: currentChatArtistId,
+                        sender: currentUser.nickname,
+                        fanNickname: currentUser.nickname,
+                        fanUserId: currentUser.userId,
+                        text: text,
+                        isArtistSender: false,
+                        isReply: false,
+                        userId: currentUser.userId,
+                        timestamp: serverTimestamp()
+                    });
+                }
+            } catch (error) {
+                console.error("메시지 전송 오류:", error);
+                showToast("메시지 전송 실패: " + (error.code || "unknown"));
+            }
+        };
+
+        function validateUserId(userId) {
+            return /^[A-Za-z0-9_]+$/.test(userId);
+        }
+
+        window.openSignupModal = function() {
+            document.getElementById("inputNickname").value = "";
+            document.getElementById("inputUserId").value = "";
+            openModal("signupModal");
+        };
+
+        window.processSignup = async function() {
+            const nick = document.getElementById("inputNickname").value.trim();
+            const uid = document.getElementById("inputUserId").value.trim();
+
+            if (!nick || !uid) {
+                showToast("닉네임과 아이디를 모두 입력해주세요!");
+                return;
+            }
+            if (!validateUserId(uid)) {
+                showToast("아이디는 영문, 숫자, _만 사용할 수 있습니다.");
+                return;
+            }
+
+            try {
+                const userRef = doc(db, "users", uid);
+                const userSnap = await getDoc(userRef);
+                if (userSnap.exists()) {
+                    showToast("이미 존재하는 아이디입니다.");
+                    return;
+                }
+
+                await setDoc(userRef, {
+                    userId: uid,
+                    nickname: nick,
+                    createdAt: serverTimestamp()
+                });
+
+                currentUser = { nickname: nick, userId: uid };
+                isSignedUp = true;
+                localStorage.setItem("gb_current_user", JSON.stringify(currentUser));
+                await startUserListeners();
+                closeModal("signupModal");
+                showToast("회원가입 완료!");
+                initAppUI();
+            } catch (error) {
+                console.error("회원가입 오류:", error);
+                showToast("회원가입에 실패했습니다.");
+            }
+        };
+
+        window.openLoginModal = async function() {
+            try {
+                const snapshot = await getDocs(collection(db, "users"));
+                if (snapshot.empty) {
+                    showToast("가입된 계정이 없습니다.");
+                    openSignupModal();
+                    return;
+                }
+
+                const container = document.getElementById("savedAccountList");
+                container.innerHTML = "";
+
+                snapshot.forEach(docSnap => {
+                    const u = docSnap.data();
+                    const item = document.createElement("div");
+                    item.style.cssText = `padding:10px 12px; border:1px solid #B3E5FC; border-radius:10px; background:#F1F8FE; display:flex; justify-content:space-between; align-items:center; cursor:pointer;`;
+                    item.innerHTML = `
+                        <div><strong>${escapeHTML(u.nickname)}</strong> <span style="font-size:0.85rem; color:#666;">@${escapeHTML(u.userId)}</span></div>
+                        <button class="primary-btn" style="padding:4px 10px; font-size:0.85rem;">선택</button>
+                    `;
+                    item.onclick = () => selectAccountToLogin(u);
+                    container.appendChild(item);
+                });
+                openModal("loginModal");
+            } catch (error) {
+                console.error(error);
+                showToast("회원 목록을 불러오지 못했습니다.");
+            }
+        };
+
+        window.switchToSignupFromLogin = function() {
+            closeModal("loginModal");
+            openSignupModal();
+        };
+
+        async function selectAccountToLogin(userObj) {
+            currentUser = { nickname: userObj.nickname, userId: userObj.userId };
+            isSignedUp = true;
+            localStorage.setItem("gb_current_user", JSON.stringify(currentUser));
+            await startUserListeners();
+            closeModal("loginModal");
+            showToast(`${currentUser.nickname}님 환영합니다!`);
+            initAppUI();
+        }
+
+        function renderMypageMenu() {
+            const menuList = document.getElementById("mypageMenuList");
+            if (!menuList) return;
+            if (!isSignedUp) {
+                menuList.style.display = "none";
+                return;
+            }
+
+            menuList.style.display = "flex";
+            menuList.innerHTML = "";
+
+            const isFirstArtist = currentUser.userId === "gpepsl";
+            const hasMyArtist = artists.some(a => a.linkedUserId === currentUser.userId);
+            const profileEditTitle = isFirstArtist || hasMyArtist ? "✏️ 정보 변경 (닉네임/아이디/아티스트명)" : "✏️ 정보 변경 (닉네임/아이디)";
+
+            const buttons = [
+                { title: profileEditTitle, action: () => openEditProfileModal() },
+                { title: "🎟 방울권 목록", action: () => openMyTicketsModal() },
+                { title: "💧 물방울 신청하기", action: () => requestBubble() },
+                { title: "🚪 로그아웃 / 회원 탈퇴", action: () => openModal("logoutModal") }
+            ];
+
+            if (isFirstArtist || hasMyArtist) {
+                buttons.splice(3, 0, { title: "👥 회원가입 유저 목록 (관리자)", action: () => openUserListModal() });
+            }
+
+            buttons.forEach(btn => {
+                const b = document.createElement("button");
+                b.className = "menu-btn";
+                b.onclick = btn.action;
+                b.innerHTML = `<span>${btn.title}</span><span>›</span>`;
+                menuList.appendChild(b);
+            });
+        }
+
+        window.openEditProfileModal = function() {
+            document.getElementById("editNickname").value = currentUser.nickname;
+            document.getElementById("editUserId").value = currentUser.userId;
+            const myArtist = artists.find(a => a.linkedUserId === currentUser.userId);
+            const artistEditSec = document.getElementById("artistNameEditSection");
+
+            if (myArtist) {
+                artistEditSec.style.display = "flex";
+                document.getElementById("editArtistName").value = myArtist.name;
+            } else {
+                artistEditSec.style.display = "none";
+            }
+            openModal("editProfileModal");
+        };
+
+        window.saveProfileChanges = async function() {
+            const newNick = document.getElementById("editNickname").value.trim();
+            const newUid = document.getElementById("editUserId").value.trim();
+            const newArtistName = document.getElementById("editArtistName").value.trim();
+
+            if (!newNick || !newUid) {
+                showToast("모든 항목을 입력해주세요.");
+                return;
+            }
+            if (!validateUserId(newUid)) {
+                showToast("아이디는 영문, 숫자, _만 사용할 수 있습니다.");
+                return;
+            }
+
+            const oldUid = currentUser.userId;
+            try {
+                if (oldUid === newUid) {
+                    await updateDoc(doc(db, "users", oldUid), { nickname: newNick });
+                } else {
+                    const newUserRef = doc(db, "users", newUid);
+                    const newUserSnap = await getDoc(newUserRef);
+                    if (newUserSnap.exists()) {
+                        showToast("이미 사용 중인 아이디입니다.");
+                        return;
+                    }
+
+                    await setDoc(newUserRef, { userId: newUid, nickname: newNick, createdAt: serverTimestamp() });
+                    const artistSnapshot = await getDocs(query(collection(db, "artists"), where("linkedUserId", "==", oldUid)));
+                    for (const artistDoc of artistSnapshot.docs) {
+                        await updateDoc(artistDoc.ref, { linkedUserId: newUid, ...(newArtistName ? { name: newArtistName } : {}) });
+                    }
+                    await deleteDoc(doc(db, "users", oldUid));
+                }
+
+                if (oldUid === newUid && newArtistName) {
+                    const artistSnapshot = await getDocs(query(collection(db, "artists"), where("linkedUserId", "==", oldUid)));
+                    for (const artistDoc of artistSnapshot.docs) {
+                        await updateDoc(artistDoc.ref, { name: newArtistName });
+                    }
+                }
+
+                currentUser = { nickname: newNick, userId: newUid };
+                isSignedUp = true;
+                localStorage.setItem("gb_current_user", JSON.stringify(currentUser));
+                closeModal("editProfileModal");
+                showToast("정보가 성공적으로 수정되었습니다.");
+                updateUserInfoUI();
+                renderArtistList();
+                renderMypageMenu();
+            } catch (error) {
+                console.error("프로필 수정 오류:", error);
+                showToast("정보 수정에 실패했습니다.");
+            }
+        };
+
+        window.openMyTicketsModal = function() {
+            const container = document.getElementById("myTicketList");
+            container.innerHTML = "";
+            const filteredTickets = subscribedTickets.filter(id => {
+                const artist = artists.find(a => a.id === id);
+                return !(artist && artist.linkedUserId === currentUser.userId);
+            });
+
+            if (filteredTickets.length === 0) {
+                container.innerHTML = `<div style="text-align:center; color:#888; padding:20px;">구독 중인 방울권이 없습니다.</div>`;
+            } else {
+                filteredTickets.forEach(id => {
+                    const artist = artists.find(a => a.id === id);
+                    if (!artist) return;
+                    const item = document.createElement("div");
+                    item.style.cssText = `display:flex; justify-content:space-between; align-items:center; padding:10px 0; border-bottom:1px solid #eee;`;
+                    item.innerHTML = `
+                        <div style="display:flex; align-items:center; gap:8px;"><span>${artist.avatar || "💧"}</span><strong>${escapeHTML(artist.name)}</strong></div>
+                        <button onclick="cancelTicket('${artist.id}')" style="background:#FF4081; color:white; border:none; padding:6px 12px; border-radius:8px; cursor:pointer;">방울권 취소</button>
+                    `;
+                    container.appendChild(item);
+                });
+            }
+            openModal("ticketListModal");
+        };
+
+        window.requestBubble = async function() {
+            if (!currentUser.userId) {
+                showToast("회원가입 후 이용해주세요.");
+                return;
+            }
+            if (currentUser.userId === "gpepsl" || artists.some(a => a.linkedUserId === currentUser.userId)) {
+                showToast("이미 아티스트이므로 물방울 신청이 불가능합니다.");
+                return;
+            }
+
+            const existing = bubbleRequests.find(r => r.userId === currentUser.userId && r.status === "pending");
+            if (existing) {
+                showToast("이미 신청하였습니다.");
+                return;
+            }
+
+            try {
+                await setDoc(doc(db, "bubbleRequests", currentUser.userId), {
+                    userId: currentUser.userId,
+                    nickname: currentUser.nickname,
+                    status: "pending",
+                    createdAt: serverTimestamp()
+                });
+                showToast("물방울 신청을 완료했습니다.");
+            } catch (error) {
+                console.error(error);
+                showToast("신청에 실패했습니다.");
+            }
+        };
+
+        window.openNotificationModal = function() {
+            const container = document.getElementById("notiList");
+            container.innerHTML = "";
+            const isArtist = currentUser.userId === "gpepsl" || artists.some(a => a.linkedUserId === currentUser.userId);
+
+            if (isArtist) {
+                const pending = bubbleRequests.filter(r => r.status === "pending");
+                if (pending.length === 0) {
+                    container.innerHTML = `<div style="text-align:center; color:#888; padding:20px;">새로운 신청 알림이 없습니다.</div>`;
+                } else {
+                    pending.forEach(req => {
+                        const item = document.createElement("div");
+                        item.style.cssText = `background:#F1F8FE; padding:12px; border-radius:10px; display:flex; justify-content:space-between; align-items:center;`;
+                        item.innerHTML = `
+                            <div><strong>${escapeHTML(req.nickname)}</strong> (@${escapeHTML(req.userId)})<br><span style="font-size:0.85rem; color:#666;">물방울 신청 도착</span></div>
+                            <button class="primary-btn" onclick="approveBubble('${req.userId}')">승낙</button>
+                        `;
+                        container.appendChild(item);
+                    });
+                }
+            } else {
+                if (userNotifications.length === 0) {
+                    container.innerHTML = `<div style="text-align:center; color:#888; padding:20px;">받은 알림이 없습니다.</div>`;
+                } else {
+                    userNotifications.forEach(noti => {
+                        const item = document.createElement("div");
+                        item.style.cssText = `background:#F1F8FE; padding:12px; border-radius:10px; display:flex; flex-direction:column; gap:8px;`;
+                        item.innerHTML = `
+                            <div>${escapeHTML(noti.msg)}</div>
+                            ${noti.type === "approved" ? `<button class="primary-btn" onclick="openSetArtistNameModal('${noti.id}')">활동 이름 정하기</button>` : ""}
+                        `;
+                        container.appendChild(item);
+                    });
+                }
+            }
+
+            unreadNotiCount = 0;
+            updateNotiBadge();
+            openModal("notiModal");
+        };
+
+        window.approveBubble = async function(applicantUserId) {
+            try {
+                const requestRef = doc(db, "bubbleRequests", applicantUserId);
+                const requestSnap = await getDoc(requestRef);
+                if (!requestSnap.exists()) {
+                    showToast("신청 정보를 찾을 수 없습니다.");
+                    return;
+                }
+
+                await updateDoc(requestRef, { status: "approved" });
+                await addDoc(collection(db, "users", applicantUserId, "notifications"), {
+                    type: "approved",
+                    msg: "🎉 물방울 신청이 승낙되었습니다! 사용할 이름을 정해보세요.",
+                    createdAt: serverTimestamp()
+                });
+
+                showToast("물방울 신청을 승낙했습니다!");
+                closeModal("notiModal");
+            } catch (error) {
+                console.error("승인 오류:", error);
+                showToast("승인에 실패했습니다.");
+            }
+        };
+
+        window.openSetArtistNameModal = function(notificationId) {
+            window.currentNotificationId = notificationId;
+            closeModal("notiModal");
+            document.getElementById("inputNewArtistName").value = "";
+            openModal("setArtistNameModal");
+        };
+
+        window.confirmArtistName = async function() {
+            const name = document.getElementById("inputNewArtistName").value.trim();
+            if (!name) {
+                showToast("이름을 입력해주세요!");
+                return;
+            }
+
+            try {
+                const newArtistRef = doc(collection(db, "artists"));
+                await setDoc(newArtistRef, {
+                    id: newArtistRef.id,
+                    linkedUserId: currentUser.userId,
+                    name: name,
+                    avatar: "💧",
+                    desc: "광버블 아티스트",
+                    createdAt: serverTimestamp()
+                });
+
+                if (window.currentNotificationId) {
+                    await deleteDoc(doc(db, "users", currentUser.userId, "notifications", window.currentNotificationId));
+                }
+
+                const requestRef = doc(db, "bubbleRequests", currentUser.userId);
+                const requestSnap = await getDoc(requestRef);
+                if (requestSnap.exists()) {
+                    await updateDoc(requestRef, { status: "completed" });
+                }
+
+                closeModal("setArtistNameModal");
+                showToast("새로운 물방울 아티스트로 등록되었습니다!");
+                switchTab(1);
+            } catch (error) {
+                console.error("아티스트 등록 오류:", error);
+                showToast("아티스트 등록에 실패했습니다.");
+            }
+        };
+
+        window.openUserListModal = async function() {
+            const container = document.getElementById("registeredUserList");
+            container.innerHTML = "";
+            try {
+                const snapshot = await getDocs(collection(db, "users"));
+                if (snapshot.empty) {
+                    container.innerHTML = `<div style="text-align:center; color:#888; padding:20px;">가입한 유저가 없습니다.</div>`;
+                } else {
+                    snapshot.forEach(docSnap => {
+                        const u = docSnap.data();
+                        const item = document.createElement("div");
+                        item.style.cssText = `padding:10px; border-bottom:1px solid #eee; display:flex; justify-content:space-between;`;
+                        item.innerHTML = `<span><strong>${escapeHTML(u.nickname)}</strong></span><span style="color:#78909C;">@${escapeHTML(u.userId)}</span>`;
+                        container.appendChild(item);
+                    });
+                }
+                openModal("userListModal");
+            } catch (error) {
+                console.error(error);
+                showToast("유저 목록을 불러오지 못했습니다.");
+            }
+        };
+
+        window.processLogout = async function() {
+            if (!confirm("정말 로그아웃을 하시겠습니까?")) return;
+            stopUserListeners();
             isSignedUp = false;
-
-            currentUser = {
-                nickname: "",
-                userId: ""
-            };
-
-
-            localStorage.removeItem(
-                "gb_current_user"
-            );
-
-
+            currentUser = { nickname: "", userId: "" };
+            localStorage.removeItem("gb_current_user");
             subscribedTickets = [];
             userNotifications = [];
-
-
             closeModal("logoutModal");
-
-            showToast(
-                "회원 탈퇴가 완료되었습니다."
-            );
-
-
+            showToast("로그아웃 되었습니다.");
             resetToInitialState();
+        };
 
+        window.processDeleteAccount = async function() {
+            if (!confirm("정말 회원탈퇴를 하시겠습니까?")) return;
+            const targetUid = currentUser.userId;
+            try {
+                const artistSnapshot = await getDocs(query(collection(db, "artists"), where("linkedUserId", "==", targetUid)));
+                for (const artistDoc of artistSnapshot.docs) {
+                    await deleteDoc(artistDoc.ref);
+                }
 
-        } catch (error) {
+                const ticketSnapshot = await getDocs(query(collection(db, "tickets"), where("userId", "==", targetUid)));
+                for (const ticketDoc of ticketSnapshot.docs) {
+                    await deleteDoc(ticketDoc.ref);
+                }
 
-            console.error(
-                "회원 탈퇴 오류:",
-                error
-            );
+                await deleteDoc(doc(db, "bubbleRequests", targetUid)).catch(() => {});
 
-            showToast(
-                "회원 탈퇴 중 오류가 발생했습니다."
-            );
+                const notiSnapshot = await getDocs(collection(db, "users", targetUid, "notifications"));
+                for (const notificationDoc of notiSnapshot.docs) {
+                    await deleteDoc(notificationDoc.ref);
+                }
+
+                await deleteDoc(doc(db, "users", targetUid));
+                stopUserListeners();
+
+                isSignedUp = false;
+                currentUser = { nickname: "", userId: "" };
+                localStorage.removeItem("gb_current_user");
+                subscribedTickets = [];
+                userNotifications = [];
+                closeModal("logoutModal");
+                showToast("회원 탈퇴가 완료되었습니다.");
+                resetToInitialState();
+            } catch (error) {
+                console.error("회원 탈퇴 오류:", error);
+                showToast("회원 탈퇴 중 오류가 발생했습니다.");
+            }
+        };
+
+        function resetToInitialState() {
+            document.getElementById("displayNickname").innerText = "비눗방울";
+            document.getElementById("displayId").innerText = "@guest_bubble";
+            document.getElementById("authButtonGroup").style.display = "flex";
+            document.getElementById("mypageMenuList").style.display = "none";
+            renderArtistList();
+            renderChatList();
+            recalculateNotiCount();
         }
-    };
 
+        window.openModal = function(id) {
+            document.getElementById(id).style.display = "flex";
+        };
 
-    // =========================================================
-    // 초기 상태
-    // =========================================================
+        window.closeModal = function(id) {
+            document.getElementById(id).style.display = "none";
+        };
 
-    function resetToInitialState() {
+        function showToast(msg) {
+            const toast = document.getElementById("toastPopup");
+            toast.innerText = msg;
+            toast.classList.add("show");
+            setTimeout(() => {
+                toast.classList.remove("show");
+            }, 3000);
+        }
 
-        document.getElementById(
-            "displayNickname"
-        ).innerText = "비눗방울";
+        function escapeHTML(value) {
+            return String(value)
+                .replaceAll("&", "&amp;")
+                .replaceAll("<", "&lt;")
+                .replaceAll(">", "&gt;")
+                .replaceAll('"', "&quot;")
+                .replaceAll("'", "&#039;");
+        }
 
-
-        document.getElementById(
-            "displayId"
-        ).innerText = "@guest_bubble";
-
-
-        document.getElementById(
-            "authButtonGroup"
-        ).style.display = "flex";
-
-
-        document.getElementById(
-            "mypageMenuList"
-        ).style.display = "none";
-
-
-        renderArtistList();
-
-        renderChatList();
-
-        recalculateNotiCount();
-    }
-
-
-    // =========================================================
-    // 모달
-    // =========================================================
-
-    window.openModal = function(id) {
-
-        document.getElementById(id).style.display =
-            "flex";
-    };
-
-
-    window.closeModal = function(id) {
-
-        document.getElementById(id).style.display =
-            "none";
-    };
-
-
-    // =========================================================
-    // Toast
-    // =========================================================
-
-    function showToast(msg) {
-
-        const toast =
-            document.getElementById(
-                "toastPopup"
-            );
-
-
-        toast.innerText = msg;
-
-        toast.classList.add("show");
-
-
-        setTimeout(() => {
-
-            toast.classList.remove("show");
-
-        }, 3000);
-    }
-
-
-    // =========================================================
-    // HTML 안전 처리
-    // =========================================================
-
-    function escapeHTML(value) {
-
-        return String(value)
-            .replaceAll("&", "&amp;")
-            .replaceAll("<", "&lt;")
-            .replaceAll(">", "&gt;")
-            .replaceAll('"', "&quot;")
-            .replaceAll("'", "&#039;");
-    }
-
-
-    function escapeAttribute(value) {
-
-        return String(value)
-            .replaceAll("\\", "\\\\")
-            .replaceAll("'", "\\'");
-    }
-
-</script>
+        function escapeAttribute(value) {
+            return String(value)
+                .replaceAll("\\", "\\\\")
+                .replaceAll("'", "\\'");
+        }
+    </script>
+</body>
+</html>
